@@ -1,0 +1,20 @@
+# Learn more about configuring your Customer account UI extension:
+# https://shopify.dev/api/customer-account-ui-extensions/unstable/configuration
+
+# The version of APIs your extension will receive. Learn more:
+# https://shopify.dev/docs/api/usage/versioning
+api_version = "2025-07"
+
+[[extensions]]
+name = "wishlist-page"
+handle = "wishlist-page"
+uid = "bc7ed5a2-dae8-0291-b4b2-46fe268521762e1ba10a"
+type = "ui_extension"
+
+[[extensions.targeting]]
+module = "./src/index.jsx"
+target = "customer-account.page.render"
+
+[extensions.capabilities]
+api_access = true
+network_access = true

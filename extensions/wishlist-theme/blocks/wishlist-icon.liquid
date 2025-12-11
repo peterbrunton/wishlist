@@ -1,0 +1,118 @@
+{% liquid
+  assign button_add_text = block.settings.button_label_add | default: "Add to wishlist"
+  assign button_remove_text = block.settings.button_label_remove | default: "Remove from wishlist"
+
+  assign product_ref = product
+
+  if product_ref == blank and card_product
+    assign product_ref = card_product
+  endif
+
+  if product_ref == blank and closest
+    if closest.product
+      assign product_ref = closest.product
+    endif
+  endif
+
+  if product_ref
+    assign variant_ref = product_ref.selected_or_first_available_variant
+    assign product_url = product_ref.online_store_url | default: product_ref.url
+    assign image_url = product_ref.featured_image | image_url: width: 640
+    assign customer_identifier = customer.id
+  endif
+%}
+
+{% if product_ref %}
+  <div
+    class="wishlist-app-block"
+    data-wishlist-block
+    data-product-id="gid://shopify/Product/{{ product_ref.id }}"
+    data-product-handle="{{ product_ref.handle }}"
+    data-product-title="{{ product_ref.title | escape }}"
+    data-product-url="{{ product_url }}"
+    data-product-image="{{ image_url }}"
+    data-product-price="{{ variant_ref.price }}"
+    data-product-currency="{{ shop.currency }}"
+    data-button-add="{{ button_add_text | escape }}"
+    data-button-remove="{{ button_remove_text | escape }}"
+    data-login-message="{{ block.settings.login_prompt_text | escape }}"
+    data-customer-id="{{ customer_identifier }}"
+  >
+    <button
+      class="wishlist-app-button"
+      type="button"
+      data-wishlist-button
+      aria-pressed="false"
+      style="display:inline-flex;align-items:center;justify-content:center;border:none;background:none;padding:0;cursor:pointer;"
+      title="{{ button_add_text }}"
+      data-title-add="{{ button_add_text | escape }}"
+      data-title-remove="{{ button_remove_text | escape }}"
+    >
+      <span class="wishlist-app-icon" aria-hidden="true" style="display:inline-flex;align-items:center;">
+        <svg
+          data-wishlist-icon="outline"
+          width="20"
+          height="20"
+          viewBox="0 0 24 24"
+          fill="none"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"
+            stroke="currentColor"
+            stroke-width="1.6"
+            fill="none"
+          />
+        </svg>
+        <svg
+          data-wishlist-icon="solid"
+          width="20"
+          height="20"
+          viewBox="0 0 24 24"
+          fill="currentColor"
+          xmlns="http://www.w3.org/2000/svg"
+          style="display:none"
+        >
+          <path
+            d="M12.001 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54l-1.449 1.31z"
+          />
+        </svg>
+      </span>
+    </button>
+  </div>
+{% else %}
+  <div class="wishlist-app-block wishlist-app-block--unavailable">
+    <span>{{ 'No product available for wishlist' }}</span>
+  </div>
+{% endif %}
+
+{% schema %}
+{
+  "name": "Wishlist button",
+  "target": "section",
+  "javascript": "wishlist-icon.js",
+  "settings": [
+    {
+      "type": "text",
+      "id": "button_label_add",
+      "label": "Add button text",
+      "default": "Add to wishlist"
+    },
+    {
+      "type": "text",
+      "id": "button_label_remove",
+      "label": "Remove button text",
+      "default": "Remove from wishlist"
+    },
+    {
+      "type": "text",
+      "id": "login_prompt_text",
+      "label": "Guest login prompt",
+      "default": "Log in to save your wishlist."
+    }
+  ],
+  "enabled_on": {
+    "templates": ["product", "collection", "list-collections", "search", "index"]
+  }
+}
+{% endschema %}
