@@ -1,10 +1,5 @@
 (function () {
   const STORAGE_KEY = "wishlist";
-  const blocks = document.querySelectorAll("[data-wishlist-block]");
-
-  if (!blocks.length) {
-    return;
-  }
 
   const proxyEndpoint = `${(window.Shopify?.routes?.root || "").replace(/\/$/, "")}/apps/wishlist`;
   const defaultCurrency =
@@ -281,7 +276,38 @@
     });
   };
 
-  blocks.forEach((block) => {
-    initializeBlock(block);
-  });
+  const initBlocks = () => {
+    const blocks = document.querySelectorAll("[data-wishlist-block]");
+    if (!blocks.length) {
+      return false;
+    }
+    blocks.forEach((block) => {
+      if (block.dataset.wishlistBound) return;
+      block.dataset.wishlistBound = "true";
+      initializeBlock(block);
+    });
+    return true;
+  };
+
+  const start = () => {
+    const hasBlocks = initBlocks();
+    if (hasBlocks) {
+      return;
+    }
+
+    const observer = new MutationObserver(() => {
+      initBlocks();
+    });
+
+    observer.observe(document.documentElement, {
+      childList: true,
+      subtree: true,
+    });
+  };
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", start);
+  } else {
+    start();
+  }
 })();

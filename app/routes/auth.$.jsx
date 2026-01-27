@@ -1,5 +1,6 @@
-export const loader = async ({ request }) => {
+import { authenticate } from "../shopify.server";
 
-  // Continue normal flow; no side effects here.
+export const loader = async ({ request }) => {
+  await authenticate.admin(request);
   return null;
 };

@@ -19,7 +19,7 @@ export default reactExtension(
 );
 
 function FullPageExtension() {
-  const { i18n, customer, authenticatedFetch } = useApi();
+  const { i18n, customer, sessionToken } = useApi();
   const [wishlist, setWishlist] = useState([]);
   const [loading, setLoading] = useState(true);
   const [removeLoading, setRemoveLoading] = useState({ id: null, loading: false });
@@ -35,26 +35,35 @@ function FullPageExtension() {
   }
 
   // ---- Helpers ----
-  async function persistWishlist(updated) {
-    // App proxy handles customer identity via logged_in_customer_id; no customerId in payload
-    if (!authenticatedFetch) {
-      console.error("Authenticated fetch unavailable; cannot persist wishlist.");
-      return;
+  async function callWishlistApi(method, body) {
+    if (!sessionToken) {
+      console.error("Session token unavailable; cannot call wishlist API.");
+      return null;
     }
 
+    const token = await sessionToken.get();
+    const response = await fetch("/public/wishlist", {
+      method,
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: body ? JSON.stringify(body) : undefined,
+    });
+
+    const payload = await response.json().catch(() => null);
+    return { response, payload };
+  }
+
+  async function persistWishlist(updated) {
     try {
-      const response = await authenticatedFetch("/apps/wishlist", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          action: "replace",
-          wishlist: updated,
-        }),
+      const result = await callWishlistApi("POST", {
+        action: "replace",
+        wishlist: updated,
       });
 
-      if (!response.ok) {
-        const payload = await response.json().catch(() => null);
-        console.error("Failed to save wishlist to metafield:", payload);
+      if (!result || !result.response.ok) {
+        console.error("Failed to save wishlist to metafield:", result?.payload);
       }
     } catch (err) {
       console.error("Failed to save wishlist to metafield:", err);
@@ -69,30 +78,23 @@ function FullPageExtension() {
         return;
       }
 
-      if (!authenticatedFetch) {
-        console.error("Authenticated fetch unavailable; cannot load wishlist.");
-        setWishlist([]);
-        return;
-      }
+      const result = await callWishlistApi("GET");
 
-      const res = await authenticatedFetch("/apps/wishlist");
-      const data = await res.json();
-
-      if (!res.ok) {
-        console.error("Failed to load wishlist from metafield:", data);
+      if (!result || !result.response.ok) {
+        console.error("Failed to load wishlist from metafield:", result?.payload);
         setWishlist([]);
         return;
       }
 
       let parsed = [];
-      if (typeof data?.wishlist === "string") {
+      if (typeof result?.payload?.wishlist === "string") {
         try {
-          parsed = JSON.parse(data.wishlist || "[]");
+          parsed = JSON.parse(result.payload.wishlist || "[]");
         } catch {
           parsed = [];
         }
-      } else if (Array.isArray(data?.wishlist)) {
-        parsed = data.wishlist;
+      } else if (Array.isArray(result?.payload?.wishlist)) {
+        parsed = result.payload.wishlist;
       }
 
       setWishlist(dedupeById(parsed));
@@ -102,7 +104,7 @@ function FullPageExtension() {
     } finally {
       setLoading(false);
     }
-  }, [authenticatedFetch, customer?.id]);
+  }, [customer?.id, sessionToken]);
 
   async function deleteWishlistItem(id) {
     setRemoveLoading({ id, loading: true });

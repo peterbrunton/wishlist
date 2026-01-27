@@ -1,0 +1,24 @@
+# Learn more about configuring your app at https://shopify.dev/docs/apps/tools/cli/configuration
+
+client_id = "ed31b456957c0b4843ca842d1f4305b5"
+name = "wishlist"
+application_url = "https://your-app-url.com"
+embedded = true
+
+[build]
+automatically_update_urls_on_dev = true
+
+[webhooks]
+api_version = "2026-01"
+
+[access_scopes]
+# Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
+scopes = "read_customers,write_customers,write_app_proxy"
+
+[auth]
+redirect_urls = [ "https://your-app-url.com/auth/callback" ]
+
+[app_proxy]
+prefix = "apps"
+subpath = "wishlist"
+url = "https://your-app-url.com/apps/wishlist"

@@ -1,8 +1,12 @@
 {
-    "servers": {
-        "shopify-dev-mcp": {
-            "command": "npx",
-            "args": ["-y", "@shopify/dev-mcp@latest"]
-        }
+  "servers": {
+    "SHOPIFY-MCP": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "@shopify/dev-mcp@latest"],
+      "env": {
+        "npm_config_cache": ".vscode/.npm-cache"
+      }
     }
+  }
 }
