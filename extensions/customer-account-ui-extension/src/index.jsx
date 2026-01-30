@@ -23,6 +23,7 @@ function FullPageExtension() {
   const [wishlist, setWishlist] = useState([]);
   const [loading, setLoading] = useState(true);
   const [removeLoading, setRemoveLoading] = useState({ id: null, loading: false });
+  const LOCAL_STORAGE_KEY = "wishlist";
 
   function dedupeById(items) {
     const map = new Map();
@@ -32,6 +33,36 @@ function FullPageExtension() {
       }
     }
     return Array.from(map.values());
+  }
+
+  function safeLocalStorage() {
+    try {
+      if (typeof localStorage === "undefined") return null;
+      return localStorage;
+    } catch {
+      return null;
+    }
+  }
+
+  function readLocalWishlist() {
+    const storage = safeLocalStorage();
+    if (!storage) return [];
+    try {
+      const raw = storage.getItem(LOCAL_STORAGE_KEY);
+      return raw ? JSON.parse(raw) : [];
+    } catch {
+      return [];
+    }
+  }
+
+  function clearLocalWishlist() {
+    const storage = safeLocalStorage();
+    if (!storage) return;
+    try {
+      storage.removeItem(LOCAL_STORAGE_KEY);
+    } catch {
+      // ignore
+    }
   }
 
   // ---- Helpers ----
@@ -55,6 +86,30 @@ function FullPageExtension() {
     return { response, payload };
   }
 
+  async function syncLocalWishlist(localItems) {
+    if (!Array.isArray(localItems) || localItems.length === 0) {
+      return null;
+    }
+
+    try {
+      const result = await callWishlistApi("POST", {
+        action: "sync",
+        wishlist: localItems,
+      });
+
+      if (!result || !result.response.ok) {
+        console.error("Failed to sync local wishlist:", result?.payload);
+        return null;
+      }
+
+      clearLocalWishlist();
+      return result?.payload?.wishlist;
+    } catch (err) {
+      console.error("Failed to sync local wishlist:", err);
+      return null;
+    }
+  }
+
   async function persistWishlist(updated) {
     try {
       const result = await callWishlistApi("POST", {
@@ -64,9 +119,12 @@ function FullPageExtension() {
 
       if (!result || !result.response.ok) {
         console.error("Failed to save wishlist to metafield:", result?.payload);
+        return false;
       }
+      return true;
     } catch (err) {
       console.error("Failed to save wishlist to metafield:", err);
+      return false;
     }
   }
 
@@ -78,11 +136,23 @@ function FullPageExtension() {
         return;
       }
 
+      const localItems = readLocalWishlist();
+      let syncedWishlist = null;
+      if (localItems.length) {
+        const synced = await syncLocalWishlist(localItems);
+        if (Array.isArray(synced)) {
+          syncedWishlist = dedupeById(synced);
+          setWishlist(syncedWishlist);
+        }
+      }
+
       const result = await callWishlistApi("GET");
 
       if (!result || !result.response.ok) {
         console.error("Failed to load wishlist from metafield:", result?.payload);
-        setWishlist([]);
+        if (!syncedWishlist) {
+          setWishlist([]);
+        }
         return;
       }
 
@@ -108,9 +178,13 @@ function FullPageExtension() {
 
   async function deleteWishlistItem(id) {
     setRemoveLoading({ id, loading: true });
+    const previous = wishlist;
     const updated = wishlist.filter((item) => item.id !== id);
     setWishlist(updated);
-    await persistWishlist(updated);
+    const saved = await persistWishlist(updated);
+    if (!saved) {
+      setWishlist(previous);
+    }
     setRemoveLoading({ id: null, loading: false });
   }
 

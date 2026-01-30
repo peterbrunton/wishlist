@@ -119,7 +119,13 @@ async function writeWishlist(admin, customerId, wishlist) {
 }
 
 export const loader = async ({ request }) => {
-  const { admin } = await authenticate.public.appProxy(request);
+  let admin;
+  try {
+    ({ admin } = await authenticate.public.appProxy(request));
+  } catch (err) {
+    console.error("Wishlist proxy auth error", err);
+    return json({ error: "App proxy authentication failed" }, { status: 401 });
+  }
   const url = new URL(request.url);
   const customerId = extractCustomerGid(url, request.headers);
 
@@ -132,7 +138,13 @@ export const loader = async ({ request }) => {
 };
 
 export const action = async ({ request }) => {
-  const { admin } = await authenticate.public.appProxy(request);
+  let admin;
+  try {
+    ({ admin } = await authenticate.public.appProxy(request));
+  } catch (err) {
+    console.error("Wishlist proxy auth error", err);
+    return json({ error: "App proxy authentication failed" }, { status: 401 });
+  }
   const url = new URL(request.url);
   const customerId = extractCustomerGid(url, request.headers);
 

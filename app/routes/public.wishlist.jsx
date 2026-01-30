@@ -147,7 +147,13 @@ export const action = async ({ request }) => {
   }
   const { admin } = await unauthenticated.admin(shop);
 
-  const current = await readWishlist(admin, customerId);
+  let current = [];
+  try {
+    current = await readWishlist(admin, customerId);
+  } catch (err) {
+    console.error("Customer account wishlist fetch error", err);
+    return cors(json({ error: "Wishlist fetch failed" }, { status: 502 }));
+  }
   const actionType = payload?.action;
   const product = payload?.product;
   const incoming = payload?.wishlist;

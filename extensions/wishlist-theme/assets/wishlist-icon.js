@@ -2,6 +2,7 @@
   const STORAGE_KEY = "wishlist";
 
   const proxyEndpoint = `${(window.Shopify?.routes?.root || "").replace(/\/$/, "")}/apps/wishlist`;
+  const loginUrl = window.Shopify?.routes?.account_login_url || "/account/login";
   const defaultCurrency =
     window.Shopify?.currency?.active ||
     window.Shopify?.currency?.current ||
@@ -38,10 +39,34 @@
     toastElement.style.boxShadow = "0 8px 16px rgba(0, 0, 0, 0.25)";
     toastElement.style.zIndex = "2147483647";
     toastElement.style.opacity = "0";
-    toastElement.style.pointerEvents = "none";
+    toastElement.style.pointerEvents = "auto";
     toastElement.style.transition = "opacity 150ms ease";
     document.body.appendChild(toastElement);
     return toastElement;
+  };
+
+  const setToastContent = (toast, message) => {
+    while (toast.firstChild) {
+      toast.removeChild(toast.firstChild);
+    }
+
+    const textNode = document.createElement("span");
+    textNode.textContent = message;
+    toast.appendChild(textNode);
+
+    const spacer = document.createElement("span");
+    spacer.textContent = " ";
+    toast.appendChild(spacer);
+
+    const link = document.createElement("a");
+    link.href = loginUrl;
+    link.textContent = "Log in";
+    link.style.color = "#fff";
+    link.style.textDecoration = "underline";
+    link.style.fontWeight = "600";
+    link.style.marginLeft = "6px";
+    link.setAttribute("aria-label", "Log in to your account");
+    toast.appendChild(link);
   };
 
   const showGuestToast = (message) => {
@@ -50,7 +75,7 @@
       message ||
       "Log in to keep your wishlist synced across devices.";
 
-    toast.textContent = displayMessage;
+    setToastContent(toast, displayMessage);
     toast.style.opacity = "1";
 
     if (toastTimeout) {
@@ -149,11 +174,18 @@
   };
 
   const ensureState = async (customerId) => {
+    const normalizedCustomerId = customerId || null;
+    if (state.loaded && state.customerId !== normalizedCustomerId) {
+      state.loaded = false;
+      state.items = [];
+      state.customerId = null;
+    }
+
     if (state.loaded) {
       return state.items;
     }
 
-    state.customerId = customerId || null;
+    state.customerId = normalizedCustomerId;
     let localItems = readLocal();
 
     if (customerId) {

@@ -15,6 +15,16 @@ type = "ui_extension"
 module = "./src/index.jsx"
 target = "customer-account.page.render"
 
+[[extensions]]
+name = "wishlist-nav"
+handle = "wishlist-nav"
+uid = "679ba9d3-bc58-a1ed-6924-b690fe2aa3c95684b389"
+type = "ui_extension"
+
+[[extensions.targeting]]
+module = "./src/WishlistNav.jsx"
+target = "customer-account.order-index.block.render"
+
 [extensions.capabilities]
 api_access = true
 network_access = true
