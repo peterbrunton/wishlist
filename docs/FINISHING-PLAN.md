@@ -71,10 +71,14 @@ _Audit date: 2026-11-05 · Repo: `~/LIVE/apps/wishlist` · Target API: **2026-10
 
 ## 4. Finishing plan
 
-### Phase 0 – Checkpoint (½ day)
-- [ ] Commit the March WIP to `main` as "WIP: March 2026 state" (or to a `wip/march-2026` branch), then branch `feature/2026-10-upgrade`.
-- [ ] Check what's actually deployed: `shopify app versions list`, `fly status -a wishlist-2026-app`, and whether the app is installed on EU live or only on the dev store.
-- [ ] Export any existing `custom.wishlist_products` values on the dev store and the live store, for migration.
+### Phase 0 – Checkpoint ✅ done 2026-11-05
+- [x] Committed the March WIP to `main` (`e4b87df`, local only, not pushed) and branched `feature/2026-10-upgrade`.
+- [x] Deployed: **active app version from 2026-03-31 13:45** (17 versions in total).
+- [ ] Fly health: `/` returns 200, but the **first request took 27 s (cold start)**; warm requests take 0.4 s. This confirms the hosting fix in Phase 6. `fly status` needs `flyctl auth login` (Peter).
+- [x] Live EU data: the definition `custom.wishlist_products` (merchant-owned JSON, storefront PUBLIC_READ) exists, with **1 metafield in total**. That one is Peter's own test customer (3 products, last updated 2026-04-01). The saved prices (€5.02 for an X3 bundle, €79.27, €63.41) look wrong, which backs up finding #4.
+  - **Migration:** there's no real customer data. Skip the migration script, or just re-add Peter's 3 test items by hand.
+  - **Cleanup after launch:** delete the old `custom.wishlist_products` definition and value on live EU (ask first).
+- [ ] The dev store `spotlightoralcaredev` hasn't been checked yet, because the connector is on EU live. Check it when `shopify app dev` runs in Phase 1.
 
 ### Phase 1 – Platform upgrade (1–1½ days)
 - [ ] Remix → React Router 7 + `@shopify/shopify-app-react-router` (follow Shopify's migration guide; keep flat routes via `@react-router/fs-routes`).
