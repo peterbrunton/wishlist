@@ -13,6 +13,17 @@ pnpm dev         # shopify app dev --config dev
 
 Never run `shopify app dev` against `shopify.app.toml`. It's the live app.
 
+### Environment
+
+| Variable | Where | Purpose |
+| --- | --- | --- |
+| `KLAVIYO_PRIVATE_KEY` | `fly secrets` (prod), `.env` (dev, optional) | Klaviyo key with **events:write** only. If it's unset, wishlist events are logged and skipped. |
+| `DATABASE_URL` | `fly.toml` / `.env` | SQLite: sessions + wishlist snapshots |
+
+### Klaviyo events
+
+Shopify's Events API calls `/events/wishlist` whenever a customer's `$app:wishlist` changes. The app sends **Added to Wishlist** / **Removed from Wishlist** events (one per product) to Klaviyo. See `docs/FINISHING-PLAN.md` → Phase 5 for the properties and the suggested reminder flow.
+
 ---
 
 ## Wishlist App – Technical Overview

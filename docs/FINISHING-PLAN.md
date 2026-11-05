@@ -162,47 +162,43 @@ _Audit date: 2026-11-05 · Repo: `~/LIVE/apps/wishlist` · Target API: **2026-10
   - Send only "Added" events and let the Klaviyo flow re-check.
   - Better: subscribe to the **Events API** `Customer` update trigger on `customer.metafield(namespace: '$app', key: 'wishlist')` and send Klaviyo events from that webhook. That covers every write path.
 
-### Phase 5 – Email reminders (1–1½ days, needs a decision) ← the original blocker
+### Phase 5 – Email reminders ✅ code done 2026-11-05 ← the original blocker
 
-**Why it stalled:** the README design expected Flow to "watch the customer metafield". As far as I can tell, Flow has no built-in trigger that fires when a customer metafield changes (to confirm in Flow's trigger list). The metafield writes were happening, but there was nothing to start a workflow. Tags were a workaround, but tags can't carry *which* product was added, so the emails couldn't show it.
+**Why it stalled:** the old design expected Flow to "watch the customer metafield", but there was no trigger for that, and tags can't say *which* product was added.
 
-**Fix: the app emits the event itself.** The same request that saves the wishlist also sends a named event that includes the customer and product. Nothing has to watch for changes.
+**Decision (2026-11-05): Klaviyo, fed by a Shopify Events API subscription.** It covers every write path, the storefront heart and the account page alike.
 
-**✅ Decision (2026-11-05): Klaviyo (Option A).** Option B is kept below for reference only.
+How it works:
+1. **Subscription:** `[events]` subscription `wishlist-changed` (in both app configs) on `Customer` update with trigger `customer.metafield(namespace: '$app', key: 'wishlist').*`. Its query returns the customer `id`, `defaultEmailAddress` and the current list. Deliveries go to `/events/wishlist`, and the HMAC is checked by `authenticate.webhook`.
+2. **Diff:** `app/routes/events.wishlist.jsx` diffs the new list against a `WishlistSnapshot` row (new Prisma model + migration) to get *added* and *removed* products. Deliveries older than the last applied one are ignored, because deliveries can arrive out of order.
+3. **Send:** one Klaviyo event per product goes to the Events API (revision **2026-10-15**). The events are `Added to Wishlist` and `Removed from Wishlist`.
+   - **Profile:** matched by email, so it merges with the Klaviyo–Shopify integration's profile.
+   - **Properties:** `ProductID` (numeric, matches the Klaviyo Shopify catalog), `ProductName`, `URL`, `ImageURL`, `Price`, `Currency`, `WishlistCount` and `ShopifyCustomerID`.
+   - **Value:** `value` / `value_currency` are set on adds.
+4. **Retries:** `unique_id` = `<delivery id>:<added|removed>:<product>`. Shopify keeps the same delivery ID when it redelivers, so Klaviyo records each event once. A retryable Klaviyo failure (429/5xx/timeout) returns 500 **without** saving the snapshot, so Shopify redelivers. A non-retryable 4xx is logged and skipped.
+5. **Guards:**
+   - No `KLAVIYO_PRIVATE_KEY` → sending is skipped and logged (dev).
+   - No email → skipped.
+   - GDPR `customers/redact` and `shop/redact` delete snapshots.
+6. Checks:
+   - 10 new unit tests (22 total).
+   - Signed-delivery smoke test: add/remove diff, duplicate and stale deliveries ignored, cleared list → removals, forged HMAC → 401.
 
-**Option A – Klaviyo (CHOSEN)**
-- [ ] Create a Klaviyo private API key with only the **Events: write** scope. Store it as `KLAVIYO_PRIVATE_KEY` in `fly secrets` (and in local `.env` for dev).
-- [ ] Add `app/lib/klaviyo.server.js` → `trackWishlistEvent(metric, customer, product)`:
-  - `POST https://a.klaviyo.com/api/events` with a pinned `revision` header.
-  - Profile: `email` + `external_id` = the Shopify customer ID, so it merges with the profile the Klaviyo–Shopify integration already created.
-  - Properties: product ID, handle, title, URL, image, price, currency and market. These are resolved **server-side** from the product GID, so they're correct for the shopper's market.
-  - Fire-and-forget: a Klaviyo failure must never fail the wishlist save. Log it and move on.
-- [ ] Only send for `add` and `remove`. Don't send on guest `merge`, or a login would send a burst of events. Instead, send one `Added to Wishlist` event per *new* item after a merge.
-- [ ] The customer query needs `email`, and `read_customers` scope is enough for that.
-- [ ] Klaviyo flow:
-  - Trigger: Added to Wishlist.
-  - Wait 1 day, then filter: hasn't placed an order with that product since.
-  - Email 1 shows the product block.
-  - Wait 6 days, then send email 2.
-- [ ] Klaviyo already handles consent, smart sending and frequency caps, and has a price-drop/back-in-stock add-on. That avoids building throttling tags in Flow.
-- [ ] Also send `Removed from Wishlist` so the flow can exit on removal.
+**Peter / to do**
+- [ ] **Verify on the dev store first:** does the Events trigger fire for an **`$app`** metafield? Every Shopify example uses `custom`. Run `pnpm dev`, heart a product, and watch for `Received … /events/wishlist` in the terminal. If it doesn't fire, fall back to sending from `updateWishlist` (storefront), plus a small backend call for account-page removals.
+- [ ] **CLI version:** the local Shopify CLI is 3.92.1. If `app dev` or `deploy` rejects `[events]`, update it with `npm i -g @shopify/cli@latest`.
+- [ ] **API key:** create a Klaviyo private API key with **only `events:write`**. Set it yourself: `fly secrets set KLAVIYO_PRIVATE_KEY=… -a wishlist-2026-app`, or in local `.env` for dev. Don't paste it in chat.
+- [ ] **Account:** confirm which Klaviyo account is EU, and whether UK shares it.
+- [ ] **Klaviyo flow:** "Wishlist reminder".
+  - **Trigger:** metric *Added to Wishlist*.
+  - **Flow filters:**
+    - Has not placed order since starting this flow.
+    - Has not had *Removed from Wishlist* where ProductID equals the trigger's ProductID since starting the flow.
+  - **Steps:** wait 1 day → email 1 (product block from event properties) → wait 6 days → email 2.
+  - **Smart sending:** on. It only sends to profiles that can receive email marketing, which handles EU consent.
+  - **Optional:** a price-drop / back-in-stock flow on the same metric.
+- [ ] **Prices:** product prices in events are in shop currency (EUR). For UK shoppers, use the catalog's localized price in Klaviyo templates, or the `URL` (the product page shows the market price).
 
-**Option B – Shopify-native (Flow + Shopify Email) — not chosen, reference only**
-- [ ] Add a `flow_trigger` extension `wishlist-item-added` with `customer_id`, `product_id` and reference fields.
-- [ ] After each `add`, the server calls `flowTriggerReceive` (payload < 50 KB).
-- [ ] Workflow:
-  - Trigger.
-  - Condition: the customer accepts email marketing.
-  - Wait 1 day.
-  - Condition: the product is still in `$app.wishlist` and hasn't been ordered.
-  - Send the Shopify Email marketing automation.
-  - Tag `wishlist_reminder_sent` with a date to throttle.
-- [ ] Optional: a `flow_trigger_lifecycle_callback` so the app only sends events while a workflow is active.
-
-**Either way**
-- [ ] Only send for customers with marketing consent (EU/GDPR). The email is marketing, not transactional.
-- [ ] Debounce: one reminder sequence per customer per X days, however many items they add.
-- [ ] Test end to end on the dev store with a seeded customer before turning it on in EU live.
 
 ### Phase 6 – Hosting (½ day)
 - [ ] Move Fly to an EU region (`ams`/`fra`), keep `min_machines_running = 1`, and use a real health check route instead of `/`.

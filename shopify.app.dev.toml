@@ -32,6 +32,33 @@ url = "https://example.com/apps/wishlist"
 subpath = "wishlist"
 prefix = "apps"
 
+# Events API: Shopify notifies us whenever $app:wishlist changes, from ANY write path
+# (storefront proxy, customer account page). Handled by app/routes/events.wishlist.jsx,
+# which diffs against the last snapshot and sends Klaviyo Added/Removed events.
+[events]
+api_version = "2026-10"
+
+  [[events.subscription]]
+  handle = "wishlist-changed"
+  topic = "Customer"
+  actions = [ "update" ]
+  triggers = [ "customer.metafield(namespace: '$app', key: 'wishlist').*" ]
+  uri = "/events/wishlist"
+  query = """
+  query wishlist_event_payload($customerId: ID!, $metafieldNamespace: String!, $metafieldKey: String!) {
+    customer(id: $customerId) {
+      id
+      defaultEmailAddress {
+        emailAddress
+      }
+      metafield(namespace: $metafieldNamespace, key: $metafieldKey) {
+        value
+        updatedAt
+      }
+    }
+  }
+  """
+
 # App-owned wishlist storage: $app:wishlist on each customer.
 # Product references (not snapshots) so price/currency/image are always live per market.
 [customer.metafields.app.wishlist]

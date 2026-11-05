@@ -32,3 +32,16 @@ model Session {
   refreshToken        String?
   refreshTokenExpires DateTime?
 }
+
+// Last wishlist state seen per customer, so Events API deliveries (which carry only the
+// new list) can be diffed into Added/Removed events. Not a source of truth — the metafield is.
+model WishlistSnapshot {
+  id          String   @id // "<shop>:<customer gid>"
+  shop        String
+  customerId  String
+  productIds  String   // JSON array of product GIDs
+  lastEventAt DateTime // shopify-triggered-at of the last applied delivery
+  updatedAt   DateTime @updatedAt
+
+  @@index([shop])
+}
