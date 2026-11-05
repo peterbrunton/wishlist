@@ -185,8 +185,13 @@ How it works:
    - Signed-delivery smoke test: add/remove diff, duplicate and stale deliveries ignored, cleared list → removals, forged HMAC → 401.
 
 **Peter / to do**
-- [ ] **Verify on the dev store first:** does the Events trigger fire for an **`$app`** metafield? Every Shopify example uses `custom`. Run `pnpm dev`, heart a product, and watch for `Received … /events/wishlist` in the terminal. If it doesn't fire, fall back to sending from `updateWishlist` (storefront), plus a small backend call for account-page removals.
-- [ ] **CLI version:** the local Shopify CLI is 3.92.1. If `app dev` or `deploy` rejects `[events]`, update it with `npm i -g @shopify/cli@latest`.
+- [x] **Verified on the dev store (2026-11-05, `pnpm dev`, test customer "Test France"):**
+  - The Events trigger **does fire for the `$app` metafield** (`app--293485510657.wishlist`), about 1 second after each write.
+  - Adding 2 products → 2 events. Removing 1 → 1 event. Deleting the metafield → 1 removal (the `.*` trigger covers deletion). The snapshot ends at `[]`.
+  - A write with a stale `compareDigest` is rejected with a real `STALE_OBJECT` error, which the Phase 2/4 retry code relies on, and no delivery follows.
+  - The CLI (3.92.1) accepted the `[events]` config, so no CLI update is needed for dev.
+  - Test data cleaned up.
+  - Also fixed: `shopify.web.toml` `webhooks_path` was restored, because the CLI's dev-start test webhook was 404ing on `/api/webhooks`.
 - [ ] **API key:** create a Klaviyo private API key with **only `events:write`**. Set it yourself: `fly secrets set KLAVIYO_PRIVATE_KEY=… -a wishlist-2026-app`, or in local `.env` for dev. Don't paste it in chat.
 - [ ] **Account:** confirm which Klaviyo account is EU, and whether UK shares it.
 - [ ] **Klaviyo flow:** "Wishlist reminder".

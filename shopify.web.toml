@@ -1,5 +1,6 @@
 name = "react-router"
 roles = ["frontend", "backend"]
+webhooks_path = "/webhooks/app/uninstalled"
 
 [commands]
 predev = "npx prisma generate"
