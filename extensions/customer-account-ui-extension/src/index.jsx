@@ -1,79 +1,75 @@
-import { useCallback, useEffect, useState } from "react";
 import {
-  reactExtension,
-  useApi,
-  Grid,
+  extension,
   BlockStack,
-  TextBlock,
+  Grid,
+  Text,
   Button,
+  Banner,
   Image,
   Page,
-  ResourceItem,
   SkeletonImage,
   SkeletonText,
-} from "@shopify/ui-extensions-react/customer-account";
+} from "@shopify/ui-extensions/customer-account";
 
-export default reactExtension(
-  "customer-account.page.render",
-  () => <FullPageExtension />
-);
+const API_URL = "https://wishlist-2026-app.fly.dev/public/wishlist";
+const LOCAL_STORAGE_KEY = "wishlist";
+const SKELETON_COUNT = 3;
 
-function FullPageExtension() {
-  const { i18n, customer, sessionToken } = useApi();
-  const [wishlist, setWishlist] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [removeLoading, setRemoveLoading] = useState({ id: null, loading: false });
-  const LOCAL_STORAGE_KEY = "wishlist";
+// ---- Utilities ----
 
-  function dedupeById(items) {
-    const map = new Map();
-    for (const item of items) {
-      if (item?.id) {
-        map.set(item.id, item);
-      }
-    }
-    return Array.from(map.values());
+function dedupeById(items = []) {
+  const map = new Map();
+  for (const item of items) {
+    if (item?.id) map.set(item.id, item);
   }
+  return Array.from(map.values());
+}
 
-  function safeLocalStorage() {
-    try {
-      if (typeof localStorage === "undefined") return null;
-      return localStorage;
-    } catch {
-      return null;
-    }
+function readLocalWishlist() {
+  try {
+    const raw = typeof localStorage !== "undefined" && localStorage.getItem(LOCAL_STORAGE_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
   }
+}
 
-  function readLocalWishlist() {
-    const storage = safeLocalStorage();
-    if (!storage) return [];
-    try {
-      const raw = storage.getItem(LOCAL_STORAGE_KEY);
-      return raw ? JSON.parse(raw) : [];
-    } catch {
-      return [];
-    }
+function clearLocalWishlist() {
+  try {
+    if (typeof localStorage !== "undefined") localStorage.removeItem(LOCAL_STORAGE_KEY);
+  } catch { /* ignore */ }
+}
+
+function parseWishlist(value) {
+  if (!value) return [];
+  if (Array.isArray(value)) return value;
+  try { return JSON.parse(value); } catch { return []; }
+}
+
+function shopFromToken(token) {
+  try {
+    const payload = JSON.parse(atob(token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/")));
+    return payload.dest?.replace(/^https?:\/\//, "") || null;
+  } catch {
+    return null;
   }
+}
 
-  function clearLocalWishlist() {
-    const storage = safeLocalStorage();
-    if (!storage) return;
-    try {
-      storage.removeItem(LOCAL_STORAGE_KEY);
-    } catch {
-      // ignore
-    }
-  }
+// ---- Extension entry ----
 
-  // ---- Helpers ----
-  async function callWishlistApi(method, body) {
-    if (!sessionToken) {
-      console.error("Session token unavailable; cannot call wishlist API.");
-      return null;
-    }
+export default extension("customer-account.page.render", (root, api) => {
+  const { sessionToken, i18n } = api;
 
+  let wishlist = [];
+  let hasError = false;
+
+  // ---- API helpers ----
+
+  async function callApi(method, body) {
     const token = await sessionToken.get();
-    const response = await fetch("/public/wishlist", {
+    const shop = shopFromToken(token);
+    const url = shop ? `${API_URL}?shop=${encodeURIComponent(shop)}` : API_URL;
+    const res = await fetch(url, {
       method,
       headers: {
         Authorization: `Bearer ${token}`,
@@ -81,177 +77,183 @@ function FullPageExtension() {
       },
       body: body ? JSON.stringify(body) : undefined,
     });
-
-    const payload = await response.json().catch(() => null);
-    return { response, payload };
+    const payload = await res.json().catch(() => null);
+    if (!res.ok) throw new Error(payload?.error || `HTTP ${res.status}`);
+    return payload;
   }
 
-  async function syncLocalWishlist(localItems) {
-    if (!Array.isArray(localItems) || localItems.length === 0) {
-      return null;
-    }
+  async function fetchWishlist() {
+    const payload = await callApi("GET");
+    return parseWishlist(payload?.wishlist);
+  }
 
+  async function saveWishlist(items) {
+    await callApi("POST", { action: "replace", wishlist: items });
+  }
+
+  // ---- UI tree ----
+
+  const page = root.createComponent(Page, { title: "Wishlist" });
+  root.appendChild(page);
+
+  const outerStack = root.createComponent(BlockStack, { spacing: "loose" });
+  page.appendChild(outerStack);
+
+  let errorBanner = null;
+
+  const grid = root.createComponent(Grid, {
+    columns: ["fill", "fill", "fill"],
+    rows: "auto",
+    spacing: "loose",
+  });
+  outerStack.appendChild(grid);
+
+  let emptyText = null;
+
+  // ---- Skeletons ----
+
+  function buildSkeleton() {
+    const item = root.createComponent(BlockStack, { spacing: "base" });
+    item.appendChild(root.createComponent(SkeletonImage, { inlineSize: "fill", aspectRatio: 1 }));
+    const lines = root.createComponent(BlockStack, { spacing: "extraTight" });
+    lines.appendChild(root.createComponent(SkeletonText, { inlineSize: "base" }));
+    lines.appendChild(root.createComponent(SkeletonText, { inlineSize: "small" }));
+    item.appendChild(lines);
+    return item;
+  }
+
+  let skeletons = [];
+
+  function showSkeletons() {
+    skeletons = Array.from({ length: SKELETON_COUNT }, () => {
+      const s = buildSkeleton();
+      grid.appendChild(s);
+      return s;
+    });
+  }
+
+  function removeSkeletons() {
+    for (const s of skeletons) grid.removeChild(s);
+    skeletons = [];
+  }
+
+  // ---- Error banner ----
+
+  function showError(detail) {
+    if (errorBanner) return;
+    const banner = root.createComponent(Banner, { status: "critical", title: "Could not load your wishlist" });
+    const stack = root.createComponent(BlockStack, { spacing: "base" });
+    const msg = root.createComponent(Text);
+    msg.appendChild(root.createText(detail ? `Error: ${detail}` : "Something went wrong. Please try again."));
+    stack.appendChild(msg);
+    const btn = root.createComponent(Button, { kind: "secondary", onPress: () => load() });
+    btn.appendChild(root.createText("Try again"));
+    stack.appendChild(btn);
+    banner.appendChild(stack);
+    outerStack.insertBefore(banner, grid);
+    errorBanner = banner;
+  }
+
+  function hideError() {
+    if (errorBanner) { outerStack.removeChild(errorBanner); errorBanner = null; }
+  }
+
+  // ---- Product cards ----
+
+  const productNodes = new Map();
+
+  function formatPrice(product) {
+    const amount = Number(product.priceRange?.minVariantPrice?.amount ?? 0);
+    const currency = product.priceRange?.minVariantPrice?.currencyCode || "USD";
+    return i18n.formatCurrency(Number.isFinite(amount) ? amount : 0, { currency });
+  }
+
+  async function handleRemove(id) {
+    const previous = wishlist.slice();
+    wishlist = wishlist.filter((item) => item.id !== id);
+    renderWishlist();
     try {
-      const result = await callWishlistApi("POST", {
-        action: "sync",
-        wishlist: localItems,
-      });
-
-      if (!result || !result.response.ok) {
-        console.error("Failed to sync local wishlist:", result?.payload);
-        return null;
-      }
-
-      clearLocalWishlist();
-      return result?.payload?.wishlist;
-    } catch (err) {
-      console.error("Failed to sync local wishlist:", err);
-      return null;
+      await saveWishlist(wishlist);
+    } catch {
+      wishlist = previous;
+      renderWishlist();
     }
   }
 
-  async function persistWishlist(updated) {
-    try {
-      const result = await callWishlistApi("POST", {
-        action: "replace",
-        wishlist: updated,
-      });
+  function buildProductCard(product) {
+    const card = root.createComponent(BlockStack, { spacing: "base" });
 
-      if (!result || !result.response.ok) {
-        console.error("Failed to save wishlist to metafield:", result?.payload);
-        return false;
-      }
-      return true;
-    } catch (err) {
-      console.error("Failed to save wishlist to metafield:", err);
-      return false;
+    if (product.featuredImage?.url) {
+      card.appendChild(root.createComponent(Image, { source: product.featuredImage.url }));
+    }
+
+    const title = root.createComponent(Text, { emphasis: "bold" });
+    title.appendChild(root.createText(product.title || ""));
+    card.appendChild(title);
+
+    const price = root.createComponent(Text, { appearance: "subdued" });
+    price.appendChild(root.createText(formatPrice(product)));
+    card.appendChild(price);
+
+    const actions = root.createComponent(BlockStack, { spacing: "tight" });
+
+    if (product.onlineStoreUrl) {
+      const viewBtn = root.createComponent(Button, { kind: "primary", to: product.onlineStoreUrl });
+      viewBtn.appendChild(root.createText("View product"));
+      actions.appendChild(viewBtn);
+    }
+
+    const removeBtn = root.createComponent(Button, { kind: "secondary", onPress: () => handleRemove(product.id) });
+    removeBtn.appendChild(root.createText("Remove"));
+    actions.appendChild(removeBtn);
+
+    card.appendChild(actions);
+    return card;
+  }
+
+  function renderWishlist() {
+    for (const node of productNodes.values()) grid.removeChild(node);
+    productNodes.clear();
+
+    if (emptyText) { grid.removeChild(emptyText); emptyText = null; }
+
+    if (wishlist.length === 0) {
+      emptyText = root.createComponent(Text, { appearance: "subdued" });
+      emptyText.appendChild(root.createText("No items in your wishlist yet."));
+      grid.appendChild(emptyText);
+      return;
+    }
+
+    for (const product of wishlist) {
+      const card = buildProductCard(product);
+      productNodes.set(product.id, card);
+      grid.appendChild(card);
     }
   }
 
-  const loadWishlist = useCallback(async () => {
-    setLoading(true);
-    try {
-      if (!customer?.id) {
-        setWishlist([]);
-        return;
-      }
+  // ---- Load ----
 
+  async function load() {
+    hideError();
+    hasError = false;
+    if (skeletons.length === 0) showSkeletons();
+
+    try {
       const localItems = readLocalWishlist();
-      let syncedWishlist = null;
       if (localItems.length) {
-        const synced = await syncLocalWishlist(localItems);
-        if (Array.isArray(synced)) {
-          syncedWishlist = dedupeById(synced);
-          setWishlist(syncedWishlist);
-        }
+        await callApi("POST", { action: "sync", wishlist: localItems });
+        clearLocalWishlist();
       }
-
-      const result = await callWishlistApi("GET");
-
-      if (!result || !result.response.ok) {
-        console.error("Failed to load wishlist from metafield:", result?.payload);
-        if (!syncedWishlist) {
-          setWishlist([]);
-        }
-        return;
-      }
-
-      let parsed = [];
-      if (typeof result?.payload?.wishlist === "string") {
-        try {
-          parsed = JSON.parse(result.payload.wishlist || "[]");
-        } catch {
-          parsed = [];
-        }
-      } else if (Array.isArray(result?.payload?.wishlist)) {
-        parsed = result.payload.wishlist;
-      }
-
-      setWishlist(dedupeById(parsed));
-    } catch (err) {
-      console.error("Error loading wishlist:", err);
-      setWishlist([]);
+      wishlist = dedupeById(await fetchWishlist());
+    } catch (e) {
+      hasError = true;
+      showError(e?.message || String(e));
     } finally {
-      setLoading(false);
+      removeSkeletons();
+      if (!hasError) renderWishlist();
     }
-  }, [customer?.id, sessionToken]);
-
-  async function deleteWishlistItem(id) {
-    setRemoveLoading({ id, loading: true });
-    const previous = wishlist;
-    const updated = wishlist.filter((item) => item.id !== id);
-    setWishlist(updated);
-    const saved = await persistWishlist(updated);
-    if (!saved) {
-      setWishlist(previous);
-    }
-    setRemoveLoading({ id: null, loading: false });
   }
 
-  // ---- Lifecycle ----
-  useEffect(() => {
-    loadWishlist();
-  }, [loadWishlist]);
-
-  // ---- UI ----
-  return (
-    <Page title="Wishlist">
-      <Grid columns={["fill", "fill", "fill"]} rows="auto" spacing="loose">
-        {loading && (
-          <ResourceItem loading>
-            <BlockStack spacing="base">
-              <SkeletonImage inlineSize="fill" aspectRatio={1} blockSize="fill" />
-              <BlockStack spacing="none">
-                <SkeletonText inlineSize="base" />
-              </BlockStack>
-              <SkeletonText inlineSize="small" />
-            </BlockStack>
-          </ResourceItem>
-        )}
-
-        {!loading &&
-          wishlist.length > 0 &&
-          wishlist.map((product) => (
-            <ResourceItem
-              key={product.id}
-              action={
-                <>
-                  <Button kind="primary" to={product.onlineStoreUrl}>
-                    View product
-                  </Button>
-                  <Button
-                    kind="secondary"
-                    loading={removeLoading.loading && product.id === removeLoading.id}
-                    onPress={() => deleteWishlistItem(product.id)}
-                  >
-                    Remove
-                  </Button>
-                </>
-              }
-            >
-              <BlockStack spacing="base">
-                <Image source={product.featuredImage?.url} />
-                <TextBlock emphasis="bold">{product.title}</TextBlock>
-                <TextBlock appearance="subdued">
-                  {(() => {
-                    const amountRaw = product.priceRange?.minVariantPrice?.amount ?? 0;
-                    const amount = Number(amountRaw);
-                    const currency =
-                      product.priceRange?.minVariantPrice?.currencyCode || "USD";
-                    return i18n.formatCurrency(
-                      Number.isFinite(amount) ? amount : 0,
-                      { currency }
-                    );
-                  })()}
-                </TextBlock>
-              </BlockStack>
-            </ResourceItem>
-          ))}
-
-        {!loading && wishlist.length === 0 && (
-          <TextBlock>No items in your wishlist.</TextBlock>
-        )}
-      </Grid>
-    </Page>
-  );
-}
+  showSkeletons();
+  load();
+});

@@ -1,8 +1,10 @@
 import { json } from "@remix-run/node";
 import { authenticate } from "~/shopify.server";
-
-const METAFIELD_NAMESPACE = "wishlist";
-const METAFIELD_KEY = "customer_products";
+import {
+  dedupeById,
+  readWishlist,
+  writeWishlist,
+} from "~/lib/wishlist.server";
 
 function extractCustomerGid(url, headers) {
   // Trust only Shopify-provided logged_in_customer_id (app proxy adds this)
@@ -21,103 +23,6 @@ function extractCustomerGid(url, headers) {
   return /^\d+$/.test(rawId) ? `gid://shopify/Customer/${rawId}` : null;
 }
 
-function parseWishlist(value) {
-  if (!value) return [];
-  if (Array.isArray(value)) return value;
-  try {
-    return JSON.parse(value);
-  } catch {
-    return [];
-  }
-}
-
-function dedupeById(items = []) {
-  const map = new Map();
-  for (const item of items) {
-    if (item?.id) {
-      map.set(item.id, item);
-    }
-  }
-  return Array.from(map.values());
-}
-
-async function readWishlist(admin, customerId) {
-  const query = `#graphql
-    query GetCustomerWishlist($customerId: ID!) {
-      customer(id: $customerId) {
-        id
-        metafield(namespace: "${METAFIELD_NAMESPACE}", key: "${METAFIELD_KEY}") {
-          value
-        }
-      }
-    }
-  `;
-
-  try {
-    const response = await admin.graphql(query, { variables: { customerId } });
-    const data = await response.json();
-
-    if (!response.ok) {
-      console.error("Wishlist proxy fetch failed", data?.errors);
-      return [];
-    }
-
-    const rawValue = data?.data?.customer?.metafield?.value;
-    return parseWishlist(rawValue);
-  } catch (err) {
-    console.error("Wishlist proxy read error", err);
-    return [];
-  }
-}
-
-async function writeWishlist(admin, customerId, wishlist) {
-  const mutation = `#graphql
-    mutation SaveCustomerWishlist($customerId: ID!, $wishlist: String!) {
-      customerUpdate(input: {
-        id: $customerId
-        metafields: [
-          {
-            namespace: "${METAFIELD_NAMESPACE}"
-            key: "${METAFIELD_KEY}"
-            type: "json"
-            value: $wishlist
-          }
-        ]
-      }) {
-        customer {
-          id
-        }
-        userErrors {
-          field
-          message
-        }
-      }
-    }
-  `;
-
-  const response = await admin.graphql(mutation, {
-    variables: {
-      customerId,
-      wishlist: JSON.stringify(wishlist ?? []),
-    },
-  });
-  const data = await response.json();
-
-  if (!response.ok) {
-    throw new Error(JSON.stringify(data?.errors ?? "Wishlist save failed"));
-  }
-
-  const mutationResult = data?.data?.customerUpdate;
-
-  if (!mutationResult) {
-    throw new Error("Wishlist save failed");
-  }
-
-  if (mutationResult.userErrors?.length) {
-    throw new Error(JSON.stringify(mutationResult.userErrors));
-  }
-}
-
 export const loader = async ({ request }) => {
   let admin;
   try {
@@ -133,8 +38,13 @@ export const loader = async ({ request }) => {
     return json({ wishlist: [] });
   }
 
-  const wishlist = await readWishlist(admin, customerId);
-  return json({ wishlist });
+  try {
+    const wishlist = await readWishlist(admin, customerId);
+    return json({ wishlist });
+  } catch (err) {
+    console.error("Wishlist proxy fetch error", err);
+    return json({ error: "Wishlist fetch failed" }, { status: 502 });
+  }
 };
 
 export const action = async ({ request }) => {
@@ -159,7 +69,14 @@ export const action = async ({ request }) => {
     return json({ error: "Invalid JSON payload" }, { status: 400 });
   }
 
-  const current = await readWishlist(admin, customerId);
+  let current = [];
+  try {
+    current = await readWishlist(admin, customerId);
+  } catch (err) {
+    console.error("Wishlist proxy fetch error", err);
+    return json({ error: "Wishlist fetch failed" }, { status: 502 });
+  }
+
   const actionType = payload?.action;
   const product = payload?.product;
   const incoming = payload?.wishlist;
@@ -177,10 +94,7 @@ export const action = async ({ request }) => {
     return json({ error: "Unsupported action" }, { status: 400 });
   }
 
-  const currentSerialized = JSON.stringify(current);
-  const updatedSerialized = JSON.stringify(updated);
-
-  if (currentSerialized === updatedSerialized) {
+  if (JSON.stringify(current) === JSON.stringify(updated)) {
     return json({ wishlist: updated });
   }
 

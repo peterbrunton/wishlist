@@ -237,10 +237,7 @@
 
     if (!customerId) {
       if (!exists) {
-        const message =
-          block?.dataset?.loginMessage ||
-          block?.dataset?.buttonAdd ||
-          null;
+        const message = block?.dataset?.loginMessage || null;
         showGuestToast(message);
       }
       return updated;

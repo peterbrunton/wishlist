@@ -19,9 +19,9 @@ export default function App() {
   return (
     <div className={styles.index}>
       <div className={styles.content}>
-        <h1 className={styles.heading}>A short heading about [your app]</h1>
+        <h1 className={styles.heading}>Wishlist 2026</h1>
         <p className={styles.text}>
-          A tagline about [your app] that describes your value proposition.
+          Let your customers save products they love and come back for them later.
         </p>
         {showForm && (
           <Form className={styles.form} method="post" action="/auth/login">
@@ -37,16 +37,17 @@ export default function App() {
         )}
         <ul className={styles.list}>
           <li>
-            <strong>Product feature</strong>. Some detail about your feature and
-            its benefit to your customer.
+            <strong>Heart icon on every product</strong>. A one-click theme
+            block lets customers save any product directly from your storefront.
           </li>
           <li>
-            <strong>Product feature</strong>. Some detail about your feature and
-            its benefit to your customer.
+            <strong>Syncs across devices</strong>. Logged-in customers always
+            see their wishlist — guest wishlists merge automatically on login.
           </li>
           <li>
-            <strong>Product feature</strong>. Some detail about your feature and
-            its benefit to your customer.
+            <strong>Built into the customer portal</strong>. Customers can view
+            and manage their wishlist from the Customer Account page, no extra
+            setup needed.
           </li>
         </ul>
       </div>

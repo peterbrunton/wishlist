@@ -1,99 +1,10 @@
 import { json } from "@remix-run/node";
 import { authenticate, unauthenticated } from "../shopify.server";
-
-const METAFIELD_NAMESPACE = "wishlist";
-const METAFIELD_KEY = "customer_products";
-
-function parseWishlist(value) {
-  if (!value) return [];
-  if (Array.isArray(value)) return value;
-  try {
-    return JSON.parse(value);
-  } catch {
-    return [];
-  }
-}
-
-function dedupeById(items = []) {
-  const map = new Map();
-  for (const item of items) {
-    if (item?.id) {
-      map.set(item.id, item);
-    }
-  }
-  return Array.from(map.values());
-}
-
-async function readWishlist(admin, customerId) {
-  const query = `#graphql
-    query GetCustomerWishlist($customerId: ID!) {
-      customer(id: $customerId) {
-        id
-        metafield(namespace: "${METAFIELD_NAMESPACE}", key: "${METAFIELD_KEY}") {
-          value
-        }
-      }
-    }
-  `;
-
-  const response = await admin.graphql(query, { variables: { customerId } });
-  const data = await response.json();
-
-  if (!response.ok) {
-    throw new Error(JSON.stringify(data?.errors ?? "Wishlist fetch failed"));
-  }
-
-  const rawValue = data?.data?.customer?.metafield?.value;
-  return parseWishlist(rawValue);
-}
-
-async function writeWishlist(admin, customerId, wishlist) {
-  const mutation = `#graphql
-    mutation SaveCustomerWishlist($customerId: ID!, $wishlist: String!) {
-      customerUpdate(input: {
-        id: $customerId
-        metafields: [
-          {
-            namespace: "${METAFIELD_NAMESPACE}"
-            key: "${METAFIELD_KEY}"
-            type: "json"
-            value: $wishlist
-          }
-        ]
-      }) {
-        customer {
-          id
-        }
-        userErrors {
-          field
-          message
-        }
-      }
-    }
-  `;
-
-  const response = await admin.graphql(mutation, {
-    variables: {
-      customerId,
-      wishlist: JSON.stringify(wishlist ?? []),
-    },
-  });
-  const data = await response.json();
-
-  if (!response.ok) {
-    throw new Error(JSON.stringify(data?.errors ?? "Wishlist save failed"));
-  }
-
-  const mutationResult = data?.data?.customerUpdate;
-
-  if (!mutationResult) {
-    throw new Error("Wishlist save failed");
-  }
-
-  if (mutationResult.userErrors?.length) {
-    throw new Error(JSON.stringify(mutationResult.userErrors));
-  }
-}
+import {
+  dedupeById,
+  readWishlist,
+  writeWishlist,
+} from "../lib/wishlist.server";
 
 export const loader = async ({ request }) => {
   const { sessionToken, cors } = await authenticate.public.customerAccount(
@@ -154,6 +65,7 @@ export const action = async ({ request }) => {
     console.error("Customer account wishlist fetch error", err);
     return cors(json({ error: "Wishlist fetch failed" }, { status: 502 }));
   }
+
   const actionType = payload?.action;
   const product = payload?.product;
   const incoming = payload?.wishlist;
@@ -171,10 +83,7 @@ export const action = async ({ request }) => {
     return cors(json({ error: "Unsupported action" }, { status: 400 }));
   }
 
-  const currentSerialized = JSON.stringify(current);
-  const updatedSerialized = JSON.stringify(updated);
-
-  if (currentSerialized === updatedSerialized) {
+  if (JSON.stringify(current) === JSON.stringify(updated)) {
     return cors(json({ wishlist: updated }));
   }
 

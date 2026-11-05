@@ -1,325 +1,196 @@
-import { useEffect } from "react";
-import { useFetcher } from "@remix-run/react";
+import { useLoaderData } from "@remix-run/react";
 import {
   Page,
   Layout,
-  Text,
   Card,
-  Button,
   BlockStack,
-  Box,
+  InlineStack,
+  Text,
+  Badge,
   List,
   Link,
-  InlineStack,
+  Banner,
+  Box,
 } from "@shopify/polaris";
-import { TitleBar, useAppBridge } from "@shopify/app-bridge-react";
+import { TitleBar } from "@shopify/app-bridge-react";
 import { authenticate } from "../shopify.server";
 
 export const loader = async ({ request }) => {
-  await authenticate.admin(request);
-
-  return null;
-};
-
-export const action = async ({ request }) => {
-  const { admin } = await authenticate.admin(request);
-  const color = ["Red", "Orange", "Yellow", "Green"][
-    Math.floor(Math.random() * 4)
-  ];
-  const response = await admin.graphql(
-    `#graphql
-      mutation populateProduct($product: ProductCreateInput!) {
-        productCreate(product: $product) {
-          product {
-            id
-            title
-            handle
-            status
-            variants(first: 10) {
-              edges {
-                node {
-                  id
-                  price
-                  barcode
-                  createdAt
-                }
-              }
-            }
-          }
-        }
-      }`,
-    {
-      variables: {
-        product: {
-          title: `${color} Snowboard`,
-        },
-      },
-    },
-  );
-  const responseJson = await response.json();
-  const product = responseJson.data.productCreate.product;
-  const variantId = product.variants.edges[0].node.id;
-  const variantResponse = await admin.graphql(
-    `#graphql
-    mutation shopifyRemixTemplateUpdateVariant($productId: ID!, $variants: [ProductVariantsBulkInput!]!) {
-      productVariantsBulkUpdate(productId: $productId, variants: $variants) {
-        productVariants {
-          id
-          price
-          barcode
-          createdAt
-        }
-      }
-    }`,
-    {
-      variables: {
-        productId: product.id,
-        variants: [{ id: variantId, price: "100.00" }],
-      },
-    },
-  );
-  const variantResponseJson = await variantResponse.json();
-
-  return {
-    product: responseJson.data.productCreate.product,
-    variant: variantResponseJson.data.productVariantsBulkUpdate.productVariants,
-  };
+  const { session } = await authenticate.admin(request);
+  return { shop: session.shop };
 };
 
 export default function Index() {
-  const fetcher = useFetcher();
-  const shopify = useAppBridge();
-  const isLoading =
-    ["loading", "submitting"].includes(fetcher.state) &&
-    fetcher.formMethod === "POST";
-  const productId = fetcher.data?.product?.id.replace(
-    "gid://shopify/Product/",
-    "",
-  );
-
-  useEffect(() => {
-    if (productId) {
-      shopify.toast.show("Product created");
-    }
-  }, [productId, shopify]);
-  const generateProduct = () => fetcher.submit({}, { method: "POST" });
+  const { shop } = useLoaderData();
 
   return (
     <Page>
-      <TitleBar title="Remix app template">
-        <button variant="primary" onClick={generateProduct}>
-          Generate a product
-        </button>
-      </TitleBar>
+      <TitleBar title="Wishlist" />
       <BlockStack gap="500">
         <Layout>
           <Layout.Section>
             <Card>
-              <BlockStack gap="500">
+              <BlockStack gap="400">
                 <BlockStack gap="200">
                   <Text as="h2" variant="headingMd">
-                    Congrats on creating a new Shopify app 🎉
+                    Wishlist 2026
                   </Text>
                   <Text variant="bodyMd" as="p">
-                    This embedded app template uses{" "}
-                    <Link
-                      url="https://shopify.dev/docs/apps/tools/app-bridge"
-                      target="_blank"
-                      removeUnderline
-                    >
-                      App Bridge
-                    </Link>{" "}
-                    interface examples like an{" "}
-                    <Link url="/app/additional" removeUnderline>
-                      additional page in the app nav
-                    </Link>
-                    , as well as an{" "}
-                    <Link
-                      url="https://shopify.dev/docs/api/admin-graphql"
-                      target="_blank"
-                      removeUnderline
-                    >
-                      Admin GraphQL
-                    </Link>{" "}
-                    mutation demo, to provide a starting point for app
-                    development.
+                    Let customers save products they love and come back for them
+                    later. Wishlists are stored on each customer's Shopify
+                    account as a metafield and sync across your storefront and
+                    the customer account portal.
                   </Text>
                 </BlockStack>
-                <BlockStack gap="200">
-                  <Text as="h3" variant="headingMd">
-                    Get started with products
-                  </Text>
-                  <Text as="p" variant="bodyMd">
-                    Generate a product with GraphQL and get the JSON output for
-                    that product. Learn more about the{" "}
-                    <Link
-                      url="https://shopify.dev/docs/api/admin-graphql/latest/mutations/productCreate"
-                      target="_blank"
-                      removeUnderline
-                    >
-                      productCreate
-                    </Link>{" "}
-                    mutation in our API references.
-                  </Text>
-                </BlockStack>
-                <InlineStack gap="300">
-                  <Button loading={isLoading} onClick={generateProduct}>
-                    Generate a product
-                  </Button>
-                  {fetcher.data?.product && (
-                    <Button
-                      url={`shopify:admin/products/${productId}`}
-                      target="_blank"
-                      variant="plain"
-                    >
-                      View product
-                    </Button>
-                  )}
+                <InlineStack gap="200">
+                  <Badge tone="success">App proxy active</Badge>
+                  <Badge tone="success">Customer account extension ready</Badge>
+                  <Badge tone="attention">Theme block: install required</Badge>
                 </InlineStack>
-                {fetcher.data?.product && (
-                  <>
-                    <Text as="h3" variant="headingMd">
-                      {" "}
-                      productCreate mutation
-                    </Text>
-                    <Box
-                      padding="400"
-                      background="bg-surface-active"
-                      borderWidth="025"
-                      borderRadius="200"
-                      borderColor="border"
-                      overflowX="scroll"
-                    >
-                      <pre style={{ margin: 0 }}>
-                        <code>
-                          {JSON.stringify(fetcher.data.product, null, 2)}
-                        </code>
-                      </pre>
-                    </Box>
-                    <Text as="h3" variant="headingMd">
-                      {" "}
-                      productVariantsBulkUpdate mutation
-                    </Text>
-                    <Box
-                      padding="400"
-                      background="bg-surface-active"
-                      borderWidth="025"
-                      borderRadius="200"
-                      borderColor="border"
-                      overflowX="scroll"
-                    >
-                      <pre style={{ margin: 0 }}>
-                        <code>
-                          {JSON.stringify(fetcher.data.variant, null, 2)}
-                        </code>
-                      </pre>
-                    </Box>
-                  </>
-                )}
               </BlockStack>
             </Card>
           </Layout.Section>
+        </Layout>
+
+        <Layout>
+          <Layout.Section>
+            <Card>
+              <BlockStack gap="400">
+                <Text as="h2" variant="headingMd">
+                  How it works
+                </Text>
+                <List type="number">
+                  <List.Item>
+                    A customer taps the heart icon button on any product page.
+                    Guests are saved to local storage; logged-in customers sync
+                    to their Shopify account automatically.
+                  </List.Item>
+                  <List.Item>
+                    The wishlist is persisted as a JSON metafield on the
+                    customer object (namespace:{" "}
+                    <Box as="span" display="inline">
+                      <code>wishlist</code>
+                    </Box>
+                    , key:{" "}
+                    <Box as="span" display="inline">
+                      <code>customer_products</code>
+                    </Box>
+                    ).
+                  </List.Item>
+                  <List.Item>
+                    Customers can view and manage their full wishlist from the
+                    Customer Account portal — a dedicated wishlist page and an
+                    order-index shortcut are both included out of the box.
+                  </List.Item>
+                </List>
+              </BlockStack>
+            </Card>
+          </Layout.Section>
+
           <Layout.Section variant="oneThird">
             <BlockStack gap="500">
               <Card>
-                <BlockStack gap="200">
+                <BlockStack gap="300">
                   <Text as="h2" variant="headingMd">
-                    App template specs
+                    Extensions
                   </Text>
                   <BlockStack gap="200">
                     <InlineStack align="space-between">
-                      <Text as="span" variant="bodyMd">
-                        Framework
+                      <Text variant="bodyMd" as="span">
+                        Theme block
                       </Text>
-                      <Link
-                        url="https://remix.run"
-                        target="_blank"
-                        removeUnderline
-                      >
-                        Remix
-                      </Link>
+                      <Badge>wishlist-theme</Badge>
                     </InlineStack>
                     <InlineStack align="space-between">
-                      <Text as="span" variant="bodyMd">
-                        Database
+                      <Text variant="bodyMd" as="span">
+                        Wishlist page
                       </Text>
-                      <Link
-                        url="https://www.prisma.io/"
-                        target="_blank"
-                        removeUnderline
-                      >
-                        Prisma
-                      </Link>
+                      <Badge>wishlist-page</Badge>
                     </InlineStack>
                     <InlineStack align="space-between">
-                      <Text as="span" variant="bodyMd">
-                        Interface
+                      <Text variant="bodyMd" as="span">
+                        Account nav block
                       </Text>
-                      <span>
-                        <Link
-                          url="https://polaris.shopify.com"
-                          target="_blank"
-                          removeUnderline
-                        >
-                          Polaris
-                        </Link>
-                        {", "}
-                        <Link
-                          url="https://shopify.dev/docs/apps/tools/app-bridge"
-                          target="_blank"
-                          removeUnderline
-                        >
-                          App Bridge
-                        </Link>
-                      </span>
+                      <Badge>wishlist-nav</Badge>
                     </InlineStack>
                     <InlineStack align="space-between">
-                      <Text as="span" variant="bodyMd">
-                        API
+                      <Text variant="bodyMd" as="span">
+                        App proxy path
                       </Text>
-                      <Link
-                        url="https://shopify.dev/docs/api/admin-graphql"
-                        target="_blank"
-                        removeUnderline
-                      >
-                        GraphQL API
-                      </Link>
+                      <Badge tone="success">/apps/wishlist</Badge>
                     </InlineStack>
                   </BlockStack>
                 </BlockStack>
               </Card>
+
               <Card>
-                <BlockStack gap="200">
+                <BlockStack gap="300">
                   <Text as="h2" variant="headingMd">
-                    Next steps
+                    Metafield reference
                   </Text>
-                  <List>
-                    <List.Item>
-                      Build an{" "}
-                      <Link
-                        url="https://shopify.dev/docs/apps/getting-started/build-app-example"
-                        target="_blank"
-                        removeUnderline
-                      >
-                        {" "}
-                        example app
-                      </Link>{" "}
-                      to get started
-                    </List.Item>
-                    <List.Item>
-                      Explore Shopify’s API with{" "}
-                      <Link
-                        url="https://shopify.dev/docs/apps/tools/graphiql-admin-api"
-                        target="_blank"
-                        removeUnderline
-                      >
-                        GraphiQL
-                      </Link>
-                    </List.Item>
-                  </List>
+                  <BlockStack gap="100">
+                    <InlineStack align="space-between">
+                      <Text variant="bodyMd" as="span">
+                        Owner
+                      </Text>
+                      <Text variant="bodyMd" as="span">
+                        Customer
+                      </Text>
+                    </InlineStack>
+                    <InlineStack align="space-between">
+                      <Text variant="bodyMd" as="span">
+                        Namespace
+                      </Text>
+                      <Text variant="bodyMd" as="span">
+                        <code>wishlist</code>
+                      </Text>
+                    </InlineStack>
+                    <InlineStack align="space-between">
+                      <Text variant="bodyMd" as="span">
+                        Key
+                      </Text>
+                      <Text variant="bodyMd" as="span">
+                        <code>customer_products</code>
+                      </Text>
+                    </InlineStack>
+                    <InlineStack align="space-between">
+                      <Text variant="bodyMd" as="span">
+                        Type
+                      </Text>
+                      <Text variant="bodyMd" as="span">
+                        <code>json</code>
+                      </Text>
+                    </InlineStack>
+                  </BlockStack>
                 </BlockStack>
               </Card>
             </BlockStack>
+          </Layout.Section>
+        </Layout>
+
+        <Layout>
+          <Layout.Section>
+            <Banner title="Add the wishlist button to your theme" tone="info">
+              <BlockStack gap="200">
+                <Text variant="bodyMd" as="p">
+                  The wishlist heart icon is a theme app extension block. You
+                  need to add it to your product page template once via the
+                  theme editor.
+                </Text>
+                <InlineStack gap="300">
+                  <Link
+                    url={`https://${shop}/admin/themes/current/editor`}
+                    target="_blank"
+                    removeUnderline
+                  >
+                    Open Theme Editor
+                  </Link>
+                  <Link url="/app/additional" removeUnderline>
+                    View step-by-step guide
+                  </Link>
+                </InlineStack>
+              </BlockStack>
+            </Banner>
           </Layout.Section>
         </Layout>
       </BlockStack>

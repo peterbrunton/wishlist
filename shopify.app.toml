@@ -2,18 +2,23 @@
 
 client_id = "d75bf2a3b790b8d12feea88f394dd616"
 name = "Wishlist 2026"
-application_url = "https://example.com"
+application_url = "https://wishlist-2026-app.fly.dev"
 embedded = true
 
 [build]
 automatically_update_urls_on_dev = true
 
 [webhooks]
-api_version = "2026-04"
+api_version = "2025-10"
+
+[app_proxy]
+url = "https://wishlist-2026-app.fly.dev/apps/wishlist"
+subpath = "wishlist"
+prefix = "apps"
 
 [access_scopes]
 # Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
 scopes = "read_customers,read_metaobjects,read_products,write_customers,write_metaobjects,write_products"
 
 [auth]
-redirect_urls = [ "https://example.com/api/auth" ]
+redirect_urls = [ "https://wishlist-2026-app.fly.dev/auth/callback" ]

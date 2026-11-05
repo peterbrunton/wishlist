@@ -1,23 +1,14 @@
-import {
-  reactExtension,
-  BlockStack,
-  TextBlock,
-  Button,
-} from "@shopify/ui-extensions-react/customer-account";
+import { extension, BlockStack, Text, Button } from "@shopify/ui-extensions/customer-account";
 
-export default reactExtension(
-  "customer-account.order-index.block.render",
-  () => <WishlistNav />
-);
+export default extension("customer-account.order-index.block.render", (root) => {
+  const stack = root.createComponent(BlockStack, { spacing: "base" });
 
-function WishlistNav() {
-  return (
-    <BlockStack spacing="base">
-      <TextBlock emphasis="bold">Your wishlist</TextBlock>
-      <TextBlock>View items you've saved for later.</TextBlock>
-      <Button kind="primary" to="extension:wishlist-page">
-        Open wishlist
-      </Button>
-    </BlockStack>
-  );
-}
+  stack.appendChild(root.createComponent(Text, { emphasis: "bold" }, ["Your wishlist"]));
+  stack.appendChild(root.createComponent(Text, {}, ["View items you've saved for later."]));
+
+  const btn = root.createComponent(Button, { kind: "primary", to: "extension:wishlist-page" });
+  btn.appendChild(root.createComponent(Text, {}, ["Open wishlist"]));
+  stack.appendChild(btn);
+
+  root.appendChild(stack);
+});
