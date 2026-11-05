@@ -1,4 +1,3 @@
-import { json } from "@remix-run/node";
 import { authenticate, unauthenticated } from "../shopify.server";
 import {
   dedupeById,
@@ -13,21 +12,21 @@ export const loader = async ({ request }) => {
 
   const customerId = sessionToken.sub;
   if (!customerId) {
-    return cors(json({ error: "Customer not logged in" }, { status: 401 }));
+    return cors(Response.json({ error: "Customer not logged in" }, { status: 401 }));
   }
 
   const shop = sessionToken.dest?.replace(/^https?:\/\//, "");
   if (!shop) {
-    return cors(json({ error: "Missing shop context" }, { status: 400 }));
+    return cors(Response.json({ error: "Missing shop context" }, { status: 400 }));
   }
   const { admin } = await unauthenticated.admin(shop);
 
   try {
     const wishlist = await readWishlist(admin, customerId);
-    return cors(json({ wishlist }));
+    return cors(Response.json({ wishlist }));
   } catch (err) {
     console.error("Customer account wishlist fetch error", err);
-    return cors(json({ error: "Wishlist fetch failed" }, { status: 502 }));
+    return cors(Response.json({ error: "Wishlist fetch failed" }, { status: 502 }));
   }
 };
 
@@ -42,19 +41,19 @@ export const action = async ({ request }) => {
 
   const customerId = sessionToken.sub;
   if (!customerId) {
-    return cors(json({ error: "Customer not logged in" }, { status: 401 }));
+    return cors(Response.json({ error: "Customer not logged in" }, { status: 401 }));
   }
 
   let payload;
   try {
     payload = await request.json();
   } catch {
-    return cors(json({ error: "Invalid JSON payload" }, { status: 400 }));
+    return cors(Response.json({ error: "Invalid JSON payload" }, { status: 400 }));
   }
 
   const shop = sessionToken.dest?.replace(/^https?:\/\//, "");
   if (!shop) {
-    return cors(json({ error: "Missing shop context" }, { status: 400 }));
+    return cors(Response.json({ error: "Missing shop context" }, { status: 400 }));
   }
   const { admin } = await unauthenticated.admin(shop);
 
@@ -63,7 +62,7 @@ export const action = async ({ request }) => {
     current = await readWishlist(admin, customerId);
   } catch (err) {
     console.error("Customer account wishlist fetch error", err);
-    return cors(json({ error: "Wishlist fetch failed" }, { status: 502 }));
+    return cors(Response.json({ error: "Wishlist fetch failed" }, { status: 502 }));
   }
 
   const actionType = payload?.action;
@@ -80,19 +79,19 @@ export const action = async ({ request }) => {
   } else if (actionType === "replace" && Array.isArray(incoming)) {
     updated = dedupeById(incoming);
   } else {
-    return cors(json({ error: "Unsupported action" }, { status: 400 }));
+    return cors(Response.json({ error: "Unsupported action" }, { status: 400 }));
   }
 
   if (JSON.stringify(current) === JSON.stringify(updated)) {
-    return cors(json({ wishlist: updated }));
+    return cors(Response.json({ wishlist: updated }));
   }
 
   try {
     await writeWishlist(admin, customerId, updated);
   } catch (err) {
     console.error("Customer account wishlist save error", err);
-    return cors(json({ error: "Wishlist save failed" }, { status: 502 }));
+    return cors(Response.json({ error: "Wishlist save failed" }, { status: 502 }));
   }
 
-  return cors(json({ wishlist: updated }));
+  return cors(Response.json({ wishlist: updated }));
 };

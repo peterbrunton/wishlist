@@ -1,5 +1,5 @@
-const METAFIELD_NAMESPACE = "custom";
-const METAFIELD_KEY = "wishlist_products";
+export const METAFIELD_NAMESPACE = "custom";
+export const METAFIELD_KEY = "wishlist_products";
 
 export function parseWishlist(value) {
   if (!value) return [];

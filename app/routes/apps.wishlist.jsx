@@ -1,4 +1,3 @@
-import { json } from "@remix-run/node";
 import { authenticate } from "~/shopify.server";
 import {
   dedupeById,
@@ -29,21 +28,21 @@ export const loader = async ({ request }) => {
     ({ admin } = await authenticate.public.appProxy(request));
   } catch (err) {
     console.error("Wishlist proxy auth error", err);
-    return json({ error: "App proxy authentication failed" }, { status: 401 });
+    return Response.json({ error: "App proxy authentication failed" }, { status: 401 });
   }
   const url = new URL(request.url);
   const customerId = extractCustomerGid(url, request.headers);
 
   if (!customerId) {
-    return json({ wishlist: [] });
+    return Response.json({ wishlist: [] });
   }
 
   try {
     const wishlist = await readWishlist(admin, customerId);
-    return json({ wishlist });
+    return Response.json({ wishlist });
   } catch (err) {
     console.error("Wishlist proxy fetch error", err);
-    return json({ error: "Wishlist fetch failed" }, { status: 502 });
+    return Response.json({ error: "Wishlist fetch failed" }, { status: 502 });
   }
 };
 
@@ -53,20 +52,20 @@ export const action = async ({ request }) => {
     ({ admin } = await authenticate.public.appProxy(request));
   } catch (err) {
     console.error("Wishlist proxy auth error", err);
-    return json({ error: "App proxy authentication failed" }, { status: 401 });
+    return Response.json({ error: "App proxy authentication failed" }, { status: 401 });
   }
   const url = new URL(request.url);
   const customerId = extractCustomerGid(url, request.headers);
 
   if (!customerId) {
-    return json({ error: "Customer not logged in" }, { status: 401 });
+    return Response.json({ error: "Customer not logged in" }, { status: 401 });
   }
 
   let payload;
   try {
     payload = await request.json();
   } catch (err) {
-    return json({ error: "Invalid JSON payload" }, { status: 400 });
+    return Response.json({ error: "Invalid JSON payload" }, { status: 400 });
   }
 
   let current = [];
@@ -74,7 +73,7 @@ export const action = async ({ request }) => {
     current = await readWishlist(admin, customerId);
   } catch (err) {
     console.error("Wishlist proxy fetch error", err);
-    return json({ error: "Wishlist fetch failed" }, { status: 502 });
+    return Response.json({ error: "Wishlist fetch failed" }, { status: 502 });
   }
 
   const actionType = payload?.action;
@@ -91,19 +90,19 @@ export const action = async ({ request }) => {
   } else if (actionType === "replace" && Array.isArray(incoming)) {
     updated = dedupeById(incoming);
   } else {
-    return json({ error: "Unsupported action" }, { status: 400 });
+    return Response.json({ error: "Unsupported action" }, { status: 400 });
   }
 
   if (JSON.stringify(current) === JSON.stringify(updated)) {
-    return json({ wishlist: updated });
+    return Response.json({ wishlist: updated });
   }
 
   try {
     await writeWishlist(admin, customerId, updated);
   } catch (err) {
     console.error("Wishlist proxy save error", err);
-    return json({ error: "Wishlist save failed" }, { status: 502 });
+    return Response.json({ error: "Wishlist save failed" }, { status: 502 });
   }
 
-  return json({ wishlist: updated });
+  return Response.json({ wishlist: updated });
 };

@@ -1,199 +1,108 @@
-import { useLoaderData } from "@remix-run/react";
-import {
-  Page,
-  Layout,
-  Card,
-  BlockStack,
-  InlineStack,
-  Text,
-  Badge,
-  List,
-  Link,
-  Banner,
-  Box,
-} from "@shopify/polaris";
-import { TitleBar } from "@shopify/app-bridge-react";
+import { useLoaderData } from "react-router";
+import { boundary } from "@shopify/shopify-app-react-router/server";
 import { authenticate } from "../shopify.server";
+import { METAFIELD_KEY, METAFIELD_NAMESPACE } from "../lib/wishlist.server";
 
 export const loader = async ({ request }) => {
-  const { session } = await authenticate.admin(request);
-  return { shop: session.shop };
+  const { admin, session } = await authenticate.admin(request);
+
+  const response = await admin.graphql(
+    `#graphql
+      query WishlistDashboard($namespace: String!, $key: String!) {
+        metafieldDefinitions(
+          first: 1
+          ownerType: CUSTOMER
+          namespace: $namespace
+          key: $key
+        ) {
+          nodes {
+            id
+            type {
+              name
+            }
+            metafieldsCount
+          }
+        }
+      }`,
+    { variables: { namespace: METAFIELD_NAMESPACE, key: METAFIELD_KEY } },
+  );
+  const { data } = await response.json();
+  const definition = data?.metafieldDefinitions?.nodes?.[0] ?? null;
+
+  return {
+    shop: session.shop,
+    metafield: {
+      namespace: METAFIELD_NAMESPACE,
+      key: METAFIELD_KEY,
+      type: definition?.type?.name ?? null,
+      customersWithWishlist: definition?.metafieldsCount ?? 0,
+      defined: Boolean(definition),
+    },
+  };
 };
 
 export default function Index() {
-  const { shop } = useLoaderData();
+  const { shop, metafield } = useLoaderData();
+  const themeEditorUrl = `https://${shop}/admin/themes/current/editor`;
 
   return (
-    <Page>
-      <TitleBar title="Wishlist" />
-      <BlockStack gap="500">
-        <Layout>
-          <Layout.Section>
-            <Card>
-              <BlockStack gap="400">
-                <BlockStack gap="200">
-                  <Text as="h2" variant="headingMd">
-                    Wishlist 2026
-                  </Text>
-                  <Text variant="bodyMd" as="p">
-                    Let customers save products they love and come back for them
-                    later. Wishlists are stored on each customer's Shopify
-                    account as a metafield and sync across your storefront and
-                    the customer account portal.
-                  </Text>
-                </BlockStack>
-                <InlineStack gap="200">
-                  <Badge tone="success">App proxy active</Badge>
-                  <Badge tone="success">Customer account extension ready</Badge>
-                  <Badge tone="attention">Theme block: install required</Badge>
-                </InlineStack>
-              </BlockStack>
-            </Card>
-          </Layout.Section>
-        </Layout>
+    <s-page heading="Wishlist">
+      <s-button slot="primary-action" href={themeEditorUrl} target="_blank">
+        Open theme editor
+      </s-button>
 
-        <Layout>
-          <Layout.Section>
-            <Card>
-              <BlockStack gap="400">
-                <Text as="h2" variant="headingMd">
-                  How it works
-                </Text>
-                <List type="number">
-                  <List.Item>
-                    A customer taps the heart icon button on any product page.
-                    Guests are saved to local storage; logged-in customers sync
-                    to their Shopify account automatically.
-                  </List.Item>
-                  <List.Item>
-                    The wishlist is persisted as a JSON metafield on the
-                    customer object (namespace:{" "}
-                    <Box as="span" display="inline">
-                      <code>wishlist</code>
-                    </Box>
-                    , key:{" "}
-                    <Box as="span" display="inline">
-                      <code>customer_products</code>
-                    </Box>
-                    ).
-                  </List.Item>
-                  <List.Item>
-                    Customers can view and manage their full wishlist from the
-                    Customer Account portal — a dedicated wishlist page and an
-                    order-index shortcut are both included out of the box.
-                  </List.Item>
-                </List>
-              </BlockStack>
-            </Card>
-          </Layout.Section>
+      <s-section heading="Overview">
+        <s-stack direction="inline" gap="base">
+          <s-badge tone={metafield.defined ? "success" : "warning"}>
+            {metafield.defined
+              ? "Metafield definition found"
+              : "No metafield definition yet"}
+          </s-badge>
+          <s-badge>
+            {metafield.customersWithWishlist} customer
+            {metafield.customersWithWishlist === 1 ? "" : "s"} with a wishlist
+          </s-badge>
+        </s-stack>
+        <s-paragraph>
+          Customers save products with the heart button on the storefront.
+          Guest wishlists are kept in the browser and merged into the
+          customer&apos;s account when they log in. Customers can manage their
+          list from the Wishlist page in their customer account.
+        </s-paragraph>
+      </s-section>
 
-          <Layout.Section variant="oneThird">
-            <BlockStack gap="500">
-              <Card>
-                <BlockStack gap="300">
-                  <Text as="h2" variant="headingMd">
-                    Extensions
-                  </Text>
-                  <BlockStack gap="200">
-                    <InlineStack align="space-between">
-                      <Text variant="bodyMd" as="span">
-                        Theme block
-                      </Text>
-                      <Badge>wishlist-theme</Badge>
-                    </InlineStack>
-                    <InlineStack align="space-between">
-                      <Text variant="bodyMd" as="span">
-                        Wishlist page
-                      </Text>
-                      <Badge>wishlist-page</Badge>
-                    </InlineStack>
-                    <InlineStack align="space-between">
-                      <Text variant="bodyMd" as="span">
-                        Account nav block
-                      </Text>
-                      <Badge>wishlist-nav</Badge>
-                    </InlineStack>
-                    <InlineStack align="space-between">
-                      <Text variant="bodyMd" as="span">
-                        App proxy path
-                      </Text>
-                      <Badge tone="success">/apps/wishlist</Badge>
-                    </InlineStack>
-                  </BlockStack>
-                </BlockStack>
-              </Card>
+      <s-section heading="Storage">
+        <s-table>
+          <s-table-header-row>
+            <s-table-header>Owner</s-table-header>
+            <s-table-header>Namespace</s-table-header>
+            <s-table-header>Key</s-table-header>
+            <s-table-header>Type</s-table-header>
+          </s-table-header-row>
+          <s-table-body>
+            <s-table-row>
+              <s-table-cell>Customer</s-table-cell>
+              <s-table-cell>{metafield.namespace}</s-table-cell>
+              <s-table-cell>{metafield.key}</s-table-cell>
+              <s-table-cell>{metafield.type ?? "—"}</s-table-cell>
+            </s-table-row>
+          </s-table-body>
+        </s-table>
+      </s-section>
 
-              <Card>
-                <BlockStack gap="300">
-                  <Text as="h2" variant="headingMd">
-                    Metafield reference
-                  </Text>
-                  <BlockStack gap="100">
-                    <InlineStack align="space-between">
-                      <Text variant="bodyMd" as="span">
-                        Owner
-                      </Text>
-                      <Text variant="bodyMd" as="span">
-                        Customer
-                      </Text>
-                    </InlineStack>
-                    <InlineStack align="space-between">
-                      <Text variant="bodyMd" as="span">
-                        Namespace
-                      </Text>
-                      <Text variant="bodyMd" as="span">
-                        <code>wishlist</code>
-                      </Text>
-                    </InlineStack>
-                    <InlineStack align="space-between">
-                      <Text variant="bodyMd" as="span">
-                        Key
-                      </Text>
-                      <Text variant="bodyMd" as="span">
-                        <code>customer_products</code>
-                      </Text>
-                    </InlineStack>
-                    <InlineStack align="space-between">
-                      <Text variant="bodyMd" as="span">
-                        Type
-                      </Text>
-                      <Text variant="bodyMd" as="span">
-                        <code>json</code>
-                      </Text>
-                    </InlineStack>
-                  </BlockStack>
-                </BlockStack>
-              </Card>
-            </BlockStack>
-          </Layout.Section>
-        </Layout>
-
-        <Layout>
-          <Layout.Section>
-            <Banner title="Add the wishlist button to your theme" tone="info">
-              <BlockStack gap="200">
-                <Text variant="bodyMd" as="p">
-                  The wishlist heart icon is a theme app extension block. You
-                  need to add it to your product page template once via the
-                  theme editor.
-                </Text>
-                <InlineStack gap="300">
-                  <Link
-                    url={`https://${shop}/admin/themes/current/editor`}
-                    target="_blank"
-                    removeUnderline
-                  >
-                    Open Theme Editor
-                  </Link>
-                  <Link url="/app/additional" removeUnderline>
-                    View step-by-step guide
-                  </Link>
-                </InlineStack>
-              </BlockStack>
-            </Banner>
-          </Layout.Section>
-        </Layout>
-      </BlockStack>
-    </Page>
+      <s-section slot="aside" heading="Extensions">
+        <s-unordered-list>
+          <s-list-item>Theme block: wishlist-theme</s-list-item>
+          <s-list-item>Account page: wishlist-page</s-list-item>
+          <s-list-item>Account shortcut: wishlist-nav</s-list-item>
+          <s-list-item>App proxy: /apps/wishlist</s-list-item>
+        </s-unordered-list>
+        <s-link href="/app/additional">View setup guide</s-link>
+      </s-section>
+    </s-page>
   );
 }
+
+export const headers = (headersArgs) => {
+  return boundary.headers(headersArgs);
+};

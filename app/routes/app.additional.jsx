@@ -1,18 +1,5 @@
-import { useLoaderData } from "@remix-run/react";
-import {
-  Page,
-  Layout,
-  Card,
-  BlockStack,
-  InlineStack,
-  Text,
-  Badge,
-  List,
-  Link,
-  Banner,
-  Divider,
-} from "@shopify/polaris";
-import { TitleBar } from "@shopify/app-bridge-react";
+import { useLoaderData } from "react-router";
+import { boundary } from "@shopify/shopify-app-react-router/server";
 import { authenticate } from "../shopify.server";
 
 export const loader = async ({ request }) => {
@@ -22,205 +9,64 @@ export const loader = async ({ request }) => {
 
 export default function SetupGuide() {
   const { shop } = useLoaderData();
-  const themeEditorUrl = `https://${shop}/admin/themes/current/editor`;
+  const admin = `https://${shop}/admin`;
 
   return (
-    <Page>
-      <TitleBar title="Setup Guide" />
-      <BlockStack gap="500">
-        <Layout>
-          <Layout.Section>
-            <Banner tone="info" title="Three steps to get wishlists live on your store">
-              <Text variant="bodyMd" as="p">
-                The customer account extension and app proxy activate
-                automatically. The only manual step is adding the theme block to
-                your product pages.
-              </Text>
-            </Banner>
-          </Layout.Section>
-        </Layout>
+    <s-page heading="Setup guide">
+      <s-section heading="1. Add the wishlist button to your theme">
+        <s-ordered-list>
+          <s-list-item>
+            Open the theme editor on an unpublished copy of your theme.
+          </s-list-item>
+          <s-list-item>
+            On the product template, add the{" "}
+            <s-text type="strong">Wishlist button</s-text> app block to the
+            product information section.
+          </s-list-item>
+          <s-list-item>
+            Optionally add it to product cards on collection, search and home
+            page sections.
+          </s-list-item>
+          <s-list-item>
+            Preview, then publish with your next theme release.
+          </s-list-item>
+        </s-ordered-list>
+        <s-link href={`${admin}/themes`} target="_blank">
+          Go to themes
+        </s-link>
+      </s-section>
 
-        <Layout>
-          <Layout.Section>
-            <BlockStack gap="400">
-              <Card>
-                <BlockStack gap="400">
-                  <InlineStack align="space-between" blockAlign="center">
-                    <InlineStack gap="300" blockAlign="center">
-                      <Text as="h2" variant="headingMd">
-                        Step 1 — Add the wishlist button to your theme
-                      </Text>
-                    </InlineStack>
-                    <Badge tone="attention">Action required</Badge>
-                  </InlineStack>
-                  <Text variant="bodyMd" as="p">
-                    The wishlist heart icon is a theme app extension block. Add
-                    it once to your product page template and it will appear on
-                    every product automatically.
-                  </Text>
-                  <List type="number">
-                    <List.Item>
-                      Open your{" "}
-                      <Link url={themeEditorUrl} target="_blank" removeUnderline>
-                        Theme Editor
-                      </Link>
-                      .
-                    </List.Item>
-                    <List.Item>
-                      Navigate to a <strong>Product page</strong> template in
-                      the left panel.
-                    </List.Item>
-                    <List.Item>
-                      Click <strong>Add block</strong> inside the product
-                      information section.
-                    </List.Item>
-                    <List.Item>
-                      Find <strong>Wishlist button</strong> under the Apps
-                      category and click it to add.
-                    </List.Item>
-                    <List.Item>
-                      Optionally customise the button label and guest prompt
-                      text in the block settings.
-                    </List.Item>
-                    <List.Item>
-                      Click <strong>Save</strong>.
-                    </List.Item>
-                  </List>
-                  <Text variant="bodyMd" as="p">
-                    The block can also be added to collection, search, and index
-                    templates to let customers wishlist products without
-                    navigating to the product page.
-                  </Text>
-                </BlockStack>
-              </Card>
+      <s-section heading="2. Add the Wishlist page to customer accounts">
+        <s-ordered-list>
+          <s-list-item>
+            Go to Settings → Customer accounts and open the account menu.
+          </s-list-item>
+          <s-list-item>
+            Add a menu item that links to the{" "}
+            <s-text type="strong">Wishlist</s-text> app page.
+          </s-list-item>
+          <s-list-item>
+            Optionally place the wishlist shortcut block on the Orders page in
+            the customer account editor.
+          </s-list-item>
+        </s-ordered-list>
+        <s-link href={`${admin}/settings/customer_accounts`} target="_blank">
+          Open customer account settings
+        </s-link>
+      </s-section>
 
-              <Card>
-                <BlockStack gap="400">
-                  <InlineStack align="space-between" blockAlign="center">
-                    <Text as="h2" variant="headingMd">
-                      Step 2 — Customer account extension
-                    </Text>
-                    <Badge tone="success">Auto-enabled</Badge>
-                  </InlineStack>
-                  <Text variant="bodyMd" as="p">
-                    Two customer account UI extension targets are deployed
-                    automatically with the app:
-                  </Text>
-                  <BlockStack gap="200">
-                    <InlineStack gap="200" blockAlign="center">
-                      <Badge>wishlist-page</Badge>
-                      <Text variant="bodyMd" as="span">
-                        A full-page wishlist view accessible from the customer
-                        portal at{" "}
-                        <code>extension:wishlist-page</code>.
-                      </Text>
-                    </InlineStack>
-                    <InlineStack gap="200" blockAlign="center">
-                      <Badge>wishlist-nav</Badge>
-                      <Text variant="bodyMd" as="span">
-                        A shortcut block on the order index page linking
-                        customers to their wishlist.
-                      </Text>
-                    </InlineStack>
-                  </BlockStack>
-                  <Text variant="bodyMd" as="p">
-                    Customers can view their wishlist, see product images and
-                    prices, and remove items directly from the portal.
-                  </Text>
-                </BlockStack>
-              </Card>
-
-              <Card>
-                <BlockStack gap="400">
-                  <InlineStack align="space-between" blockAlign="center">
-                    <Text as="h2" variant="headingMd">
-                      Step 3 — Test the wishlist
-                    </Text>
-                    <Badge tone="success">No action required</Badge>
-                  </InlineStack>
-                  <List type="number">
-                    <List.Item>
-                      Visit a product page on your storefront. You should see
-                      the heart icon button.
-                    </List.Item>
-                    <List.Item>
-                      Click it while <strong>logged out</strong> — the item
-                      saves to local storage and a toast prompts the customer to
-                      log in.
-                    </List.Item>
-                    <List.Item>
-                      Log in to a customer account. The local wishlist syncs to
-                      the customer's metafield automatically on the next page
-                      load.
-                    </List.Item>
-                    <List.Item>
-                      Open the Customer Account portal and navigate to the
-                      Wishlist page. The saved product should appear there.
-                    </List.Item>
-                  </List>
-                </BlockStack>
-              </Card>
-            </BlockStack>
-          </Layout.Section>
-
-          <Layout.Section variant="oneThird">
-            <BlockStack gap="500">
-              <Card>
-                <BlockStack gap="300">
-                  <Text as="h2" variant="headingMd">
-                    Guest wishlist behaviour
-                  </Text>
-                  <Text variant="bodyMd" as="p">
-                    Guests can add products to a wishlist stored in browser
-                    local storage under the key <code>wishlist</code>.
-                  </Text>
-                  <Text variant="bodyMd" as="p">
-                    When they log in, their local items are merged into their
-                    account wishlist automatically — nothing is lost.
-                  </Text>
-                </BlockStack>
-              </Card>
-
-              <Card>
-                <BlockStack gap="300">
-                  <Text as="h2" variant="headingMd">
-                    Supported templates
-                  </Text>
-                  <Text variant="bodyMd" as="p">
-                    The wishlist block can be enabled on:
-                  </Text>
-                  <List>
-                    <List.Item>Product</List.Item>
-                    <List.Item>Collection</List.Item>
-                    <List.Item>Search</List.Item>
-                    <List.Item>List collections</List.Item>
-                    <List.Item>Home (index)</List.Item>
-                  </List>
-                </BlockStack>
-              </Card>
-
-              <Card>
-                <BlockStack gap="300">
-                  <Text as="h2" variant="headingMd">
-                    App proxy
-                  </Text>
-                  <Text variant="bodyMd" as="p">
-                    The storefront wishlist button communicates through the
-                    Shopify app proxy at:
-                  </Text>
-                  <Text variant="bodyMd" as="p">
-                    <code>/apps/wishlist</code>
-                  </Text>
-                  <Text variant="bodyMd" as="p">
-                    All requests are signed by Shopify — no additional
-                    authentication is needed on the storefront.
-                  </Text>
-                </BlockStack>
-              </Card>
-            </BlockStack>
-          </Layout.Section>
-        </Layout>
-      </BlockStack>
-    </Page>
+      <s-section heading="3. Reminder emails">
+        <s-paragraph>
+          Wishlist activity is sent to Klaviyo as{" "}
+          <s-text type="strong">Added to Wishlist</s-text> and{" "}
+          <s-text type="strong">Removed from Wishlist</s-text> events. Build
+          the reminder flow in Klaviyo using these metrics as the trigger.
+        </s-paragraph>
+      </s-section>
+    </s-page>
   );
 }
+
+export const headers = (headersArgs) => {
+  return boundary.headers(headersArgs);
+};

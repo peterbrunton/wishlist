@@ -80,14 +80,17 @@ _Audit date: 2026-11-05 · Repo: `~/LIVE/apps/wishlist` · Target API: **2026-10
   - **Cleanup after launch:** delete the old `custom.wishlist_products` definition and value on live EU (ask first).
 - [ ] The dev store `spotlightoralcaredev` hasn't been checked yet, because the connector is on EU live. Check it when `shopify app dev` runs in Phase 1.
 
-### Phase 1 – Platform upgrade (1–1½ days)
-- [ ] Remix → React Router 7 + `@shopify/shopify-app-react-router` (follow Shopify's migration guide; keep flat routes via `@react-router/fs-routes`).
-- [ ] `ApiVersion.October26` in `shopify.server.js`; `[webhooks] api_version = "2026-10"`.
-- [ ] Node 22 LTS in `engines` + Dockerfile; bump Prisma; regenerate lockfile.
-- [ ] Rebuild the admin pages (`app._index`, `app.additional`) in Polaris web components and make them correct: right metafield and live status checks.
-- [ ] Trim scopes to `read_customers, write_customers, read_products`.
-- [ ] Add the GDPR compliance webhooks (`customers/data_request`, `customers/redact`, `shop/redact`). These are needed for EU even on custom distribution.
-- [ ] `pnpm lint` and `pnpm build` pass; `shopify app dev` installs cleanly on the dev store.
+### Phase 1 – Platform upgrade ✅ code done 2026-11-05 (branch `feature/2026-10-upgrade`)
+- [x] Remix → React Router 7.18.2 + `@shopify/shopify-app-react-router` 3.0.x, matched to Shopify's current React Router app template. Flat routes are kept via `@react-router/fs-routes`. `remix.config.js` and the `@remix-run/*` / `@shopify/polaris` dependencies are removed.
+- [x] `ApiVersion.October26` (app + `.graphqlrc.js`) and `[webhooks] api_version = "2026-10"`. `future.expiringOfflineAccessTokens` is on, with a Prisma migration adding `refreshToken` / `refreshTokenExpires`.
+- [x] Node **24** LTS (`.nvmrc`, Dockerfile `node:24-alpine`, engines `>=22.12`). pnpm is pinned to 10.27.0 via `packageManager`. **`pnpm-lock.yaml` is now committed**, because the Dockerfile uses `--frozen-lockfile`.
+- [x] Admin pages are rebuilt in Polaris web components. The dashboard shows the live metafield definition and the number of customers with a wishlist. The setup guide covers the theme block, the customer account menu, and Klaviyo.
+- [x] Scopes trimmed to `read_customers, read_products, write_customers`.
+- [x] Webhooks declared in TOML: `app/uninstalled`, `app/scopes_update`, plus GDPR compliance topics → `webhooks.compliance.jsx`.
+- [x] All GraphQL validated against 2026-10. `pnpm build` and `pnpm lint` pass. Prod server smoke test: `/` and `/auth/login` return 200, and calls without credentials are rejected.
+- [ ] **Before running `shopify app dev`:** `shopify.app.toml` points at the **production** app (client_id `d75bf…`) with `automatically_update_urls_on_dev = true`. Running dev would repoint the live app's URLs and app proxy to a tunnel. To avoid that, create a separate dev app config (`shopify app config link` → `shopify.app.dev.toml`, a new dev app on `spotlightoralcaredev`) and run `shopify app dev --config dev`.
+- [ ] Install via dev config on the dev store and click through the admin pages (needs Peter: CLI login/interactive).
+- [ ] The customer account extension is still on `2025-07`. That's intentional: its code rewrite is Phase 4.
 
 ### Phase 2 – Data model & server (1 day)
 - [ ] Declare `customer.metafields.app.wishlist` (`list.product_reference`) in TOML.

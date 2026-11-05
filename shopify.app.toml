@@ -9,7 +9,20 @@ embedded = true
 automatically_update_urls_on_dev = true
 
 [webhooks]
-api_version = "2025-10"
+api_version = "2026-10"
+
+  [[webhooks.subscriptions]]
+  topics = [ "app/uninstalled" ]
+  uri = "/webhooks/app/uninstalled"
+
+  [[webhooks.subscriptions]]
+  topics = [ "app/scopes_update" ]
+  uri = "/webhooks/app/scopes_update"
+
+  # GDPR compliance topics (EU store)
+  [[webhooks.subscriptions]]
+  compliance_topics = [ "customers/data_request", "customers/redact", "shop/redact" ]
+  uri = "/webhooks/compliance"
 
 [app_proxy]
 url = "https://wishlist-2026-app.fly.dev/apps/wishlist"
@@ -18,7 +31,7 @@ prefix = "apps"
 
 [access_scopes]
 # Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
-scopes = "read_customers,read_metaobjects,read_products,write_customers,write_metaobjects,write_products"
+scopes = "read_customers,read_products,write_customers"
 
 [auth]
 redirect_urls = [ "https://wishlist-2026-app.fly.dev/auth/callback" ]
