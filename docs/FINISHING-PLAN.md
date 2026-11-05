@@ -135,13 +135,32 @@ _Audit date: 2026-11-05 · Repo: `~/LIVE/apps/wishlist` · Target API: **2026-10
 - [ ] Optional / Peter decision #3: an app embed with a header count, and an `/apps/wishlist` storefront page.
 - [ ] Test in Horizon 4.x on an **unpublished** theme copy on the dev store: product page, product cards, quick add, search, the DE/FR/ES locales, and a non-EUR market.
 
-### Phase 4 – Customer account extension (1 day)
-- [ ] Upgrade to `api_version = "2026-10"`, Preact + `@shopify/ui-extensions` 2026.10.x, Polaris web components.
-- [ ] Load and remove items through the Customer Account API, show live price and image, add an "Add to cart" link, and delete the localStorage code.
-- [ ] Fix the nav block and check the full-page link format for 2026-10.
-- [ ] Add locales for all store languages.
-- [ ] Add the **Wishlist menu item** under Admin → Settings → Customer accounts.
-- [ ] Test on desktop and mobile in the updated single-column customer account layout.
+### Phase 4 – Customer account extension ✅ code done 2026-11-05
+- [x] `api_version = "2026-07"`. That's the newest version Shopify's customer account extension tooling supports today (2026-10 isn't listed yet), and it's supported until July 2027. Uses Preact 10 + `@preact/signals` + `@shopify/ui-extensions` 2026.7.x with Polaris web components. The legacy `extension()` / `createComponent` code and the dead localStorage code are deleted.
+- [x] **No app backend:**
+  - Reads `$app:wishlist` (+ `compareDigest`) through the **Customer Account API** (`shopify://customer-account/api/2026-10`).
+  - Removes with `metafieldsSet` + `compareDigest`, retrying once on `STALE_OBJECT`. Empty lists use `metafieldsDelete`.
+  - Capability is now `api_access` instead of `network_access`. The hardcoded Fly URL is gone, so the page works in dev too.
+- [x] **Live product data** comes from the **Storefront API** (`shopify.query`) with `@inContext(country, language)`, so price and currency follow the customer's market and titles follow their language. Products that are deleted or unpublished drop out automatically.
+- [x] **Page:**
+  - Responsive grid (1/2/3 columns via `s-query-container`), image, title, formatted price, and a "Sold out" badge.
+  - **Add to cart** shows only for single-variant, in-stock products, as a `/cart/add` link. Multi-variant products show only "View product".
+  - "Remove" is optimistic and rolls back with a toast on failure.
+  - Loading spinner, error banner with retry, and an empty state.
+- [x] **Nav block** (order index): shows the saved-product count with plurals and links via `extension:wishlist-page/`.
+- [x] Locales `en / de / fr / es` (German "du"). The template leftover "earnPoints" is gone.
+- [x] Checks:
+  - GraphQL validated against the Customer Account API 2026-10 and Storefront 2026-07, including `compareDigest` on the input.
+  - Components validated for both targets.
+  - `shopify app build` passes: page 36 KB, nav 31 KB.
+  - Lint, tests and the app build all pass.
+- [ ] The `public.wishlist` backend route is now unused by the new extension. **Keep it until the new extension version is deployed**, because the version live today still calls it. Delete it in Phase 7.
+- [ ] On the dev store, check that `/cart/add?id=…` adds the item and lands on the cart.
+- [ ] Add the **Wishlist menu item** under Admin → Settings → Customer accounts, and add the page in the checkout & accounts editor (the page doesn't load until it's added).
+- [ ] Test on desktop and mobile, in DE/FR/ES, and in a GBP market.
+- **Note for Phase 5:** removals on the account page now skip the app server, so the server can't send Klaviyo `Removed from Wishlist` events for them. Options:
+  - Send only "Added" events and let the Klaviyo flow re-check.
+  - Better: subscribe to the **Events API** `Customer` update trigger on `customer.metafield(namespace: '$app', key: 'wishlist')` and send Klaviyo events from that webhook. That covers every write path.
 
 ### Phase 5 – Email reminders (1–1½ days, needs a decision) ← the original blocker
 

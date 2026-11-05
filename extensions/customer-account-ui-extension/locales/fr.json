@@ -1,3 +1,28 @@
 {
-  "earnPoints": "Vous avez gagné 1,000 points avec cette commande. Vous avez été promu au niveau Platine."
+  "page": {
+    "title": "Liste de souhaits",
+    "loading": "Chargement de votre liste de souhaits",
+    "error_heading": "Impossible de charger votre liste de souhaits",
+    "error_body": "Vérifiez votre connexion et réessayez.",
+    "retry": "Réessayer",
+    "empty": "Vous n'avez encore enregistré aucun produit. Touchez le cœur sur un produit pour l'enregistrer ici."
+  },
+  "item": {
+    "view": "Voir le produit",
+    "add_to_cart": "Ajouter au panier",
+    "remove": "Retirer",
+    "remove_label": "Retirer {{title}} de votre liste de souhaits",
+    "removed": "Retiré de votre liste de souhaits",
+    "remove_failed": "Impossible de retirer ce produit. Veuillez réessayer.",
+    "sold_out": "Épuisé"
+  },
+  "nav": {
+    "heading": "Votre liste de souhaits",
+    "count": {
+      "one": "Vous avez {{count}} produit enregistré.",
+      "other": "Vous avez {{count}} produits enregistrés."
+    },
+    "empty": "Enregistrez les produits que vous aimez et retrouvez-les ici.",
+    "open": "Ouvrir la liste de souhaits"
+  }
 }

@@ -1,14 +1,36 @@
-import { extension, BlockStack, Text, Button } from "@shopify/ui-extensions/customer-account";
+import "@shopify/ui-extensions/preact";
+import { render } from "preact";
+import { useEffect, useState } from "preact/hooks";
+import { readWishlist } from "./wishlist-api";
 
-export default extension("customer-account.order-index.block.render", (root) => {
-  const stack = root.createComponent(BlockStack, { spacing: "base" });
+export default async () => {
+  render(<WishlistNav />, document.body);
+};
 
-  stack.appendChild(root.createComponent(Text, { emphasis: "bold" }, ["Your wishlist"]));
-  stack.appendChild(root.createComponent(Text, {}, ["View items you've saved for later."]));
+function WishlistNav() {
+  const t = shopify.i18n.translate;
+  const [count, setCount] = useState(null);
 
-  const btn = root.createComponent(Button, { kind: "primary", to: "extension:wishlist-page" });
-  btn.appendChild(root.createComponent(Text, {}, ["Open wishlist"]));
-  stack.appendChild(btn);
+  useEffect(() => {
+    readWishlist()
+      .then(({ ids }) => setCount(ids.length))
+      .catch(() => setCount(0));
+  }, []);
 
-  root.appendChild(stack);
-});
+  if (count === null) return null;
+
+  return (
+    <s-query-container>
+      <s-section heading={t("nav.heading")}>
+        <s-stack direction="block" gap="base">
+          <s-paragraph>{count > 0 ? t("nav.count", { count }) : t("nav.empty")}</s-paragraph>
+          <s-stack direction="inline" gap="base">
+            <s-button variant="primary" href="extension:wishlist-page/">
+              {t("nav.open")}
+            </s-button>
+          </s-stack>
+        </s-stack>
+      </s-section>
+    </s-query-container>
+  );
+}

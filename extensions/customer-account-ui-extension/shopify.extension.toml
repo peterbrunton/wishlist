@@ -1,4 +1,4 @@
-api_version = "2025-07"
+api_version = "2026-07"
 
 [[extensions]]
 name = "wishlist-page"
@@ -7,11 +7,12 @@ uid = "bc7ed5a2-dae8-0291-b4b2-46fe268521762e1ba10a"
 type = "ui_extension"
 
 [[extensions.targeting]]
-module = "./src/index.jsx"
+module = "./src/WishlistPage.jsx"
 target = "customer-account.page.render"
 
+# Customer Account API (read/write $app:wishlist) + Storefront API (live product data)
 [extensions.capabilities]
-network_access = true
+api_access = true
 
 [[extensions]]
 name = "wishlist-nav"
@@ -22,3 +23,6 @@ type = "ui_extension"
 [[extensions.targeting]]
 module = "./src/WishlistNav.jsx"
 target = "customer-account.order-index.block.render"
+
+[extensions.capabilities]
+api_access = true
