@@ -32,6 +32,16 @@ url = "https://wishlist-2026-app.fly.dev/apps/wishlist"
 subpath = "wishlist"
 prefix = "apps"
 
+# App-owned wishlist storage: $app:wishlist on each customer.
+# Product references (not snapshots) so price/currency/image are always live per market.
+[customer.metafields.app.wishlist]
+name = "Wishlist"
+description = "Products this customer saved to their wishlist (managed by the Wishlist app)."
+type = "list.product_reference"
+access.admin = "merchant_read"
+access.storefront = "public_read"
+access.customer_account = "read_write"
+
 [access_scopes]
 # Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
 scopes = "read_customers,read_products,write_customers"

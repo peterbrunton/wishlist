@@ -1,108 +1,33 @@
-import { authenticate } from "~/shopify.server";
-import {
-  dedupeById,
-  readWishlist,
-  writeWishlist,
-} from "~/lib/wishlist.server";
+// Storefront app proxy: https://{shop}/apps/wishlist -> this route.
+// Shopify signs proxy requests and appends logged_in_customer_id; we trust only that.
+import { authenticate } from "../shopify.server";
+import { handleWishlistApi } from "../lib/wishlist.server";
 
-function extractCustomerGid(url, headers) {
-  // Trust only Shopify-provided logged_in_customer_id (app proxy adds this)
-  const rawId =
-    url.searchParams.get("logged_in_customer_id") ||
-    headers.get("x-shopify-logged-in-customer-id");
-
-  if (!rawId) {
-    return null;
-  }
-
-  if (rawId.startsWith("gid://")) {
-    return rawId;
-  }
-
-  return /^\d+$/.test(rawId) ? `gid://shopify/Customer/${rawId}` : null;
+function loggedInCustomerGid(request) {
+  const raw = new URL(request.url).searchParams.get("logged_in_customer_id");
+  return raw && /^\d+$/.test(raw) ? `gid://shopify/Customer/${raw}` : null;
 }
 
-export const loader = async ({ request }) => {
+async function handle(request) {
   let admin;
   try {
     ({ admin } = await authenticate.public.appProxy(request));
   } catch (err) {
+    if (err instanceof Response) return err;
     console.error("Wishlist proxy auth error", err);
     return Response.json({ error: "App proxy authentication failed" }, { status: 401 });
   }
-  const url = new URL(request.url);
-  const customerId = extractCustomerGid(url, request.headers);
-
-  if (!customerId) {
-    return Response.json({ wishlist: [] });
+  if (!admin) {
+    return Response.json({ error: "App not installed" }, { status: 401 });
   }
 
-  try {
-    const wishlist = await readWishlist(admin, customerId);
-    return Response.json({ wishlist });
-  } catch (err) {
-    console.error("Wishlist proxy fetch error", err);
-    return Response.json({ error: "Wishlist fetch failed" }, { status: 502 });
-  }
-};
+  const { status, body } = await handleWishlistApi({
+    admin,
+    customerId: loggedInCustomerGid(request),
+    request,
+  });
+  return Response.json(body, { status, headers: { "Cache-Control": "no-store" } });
+}
 
-export const action = async ({ request }) => {
-  let admin;
-  try {
-    ({ admin } = await authenticate.public.appProxy(request));
-  } catch (err) {
-    console.error("Wishlist proxy auth error", err);
-    return Response.json({ error: "App proxy authentication failed" }, { status: 401 });
-  }
-  const url = new URL(request.url);
-  const customerId = extractCustomerGid(url, request.headers);
-
-  if (!customerId) {
-    return Response.json({ error: "Customer not logged in" }, { status: 401 });
-  }
-
-  let payload;
-  try {
-    payload = await request.json();
-  } catch (err) {
-    return Response.json({ error: "Invalid JSON payload" }, { status: 400 });
-  }
-
-  let current = [];
-  try {
-    current = await readWishlist(admin, customerId);
-  } catch (err) {
-    console.error("Wishlist proxy fetch error", err);
-    return Response.json({ error: "Wishlist fetch failed" }, { status: 502 });
-  }
-
-  const actionType = payload?.action;
-  const product = payload?.product;
-  const incoming = payload?.wishlist;
-  let updated = current;
-
-  if (actionType === "add" && product?.id) {
-    updated = dedupeById([...current, product]);
-  } else if (actionType === "remove" && product?.id) {
-    updated = current.filter((item) => item?.id !== product.id);
-  } else if (actionType === "sync" && Array.isArray(incoming)) {
-    updated = dedupeById([...current, ...incoming]);
-  } else if (actionType === "replace" && Array.isArray(incoming)) {
-    updated = dedupeById(incoming);
-  } else {
-    return Response.json({ error: "Unsupported action" }, { status: 400 });
-  }
-
-  if (JSON.stringify(current) === JSON.stringify(updated)) {
-    return Response.json({ wishlist: updated });
-  }
-
-  try {
-    await writeWishlist(admin, customerId, updated);
-  } catch (err) {
-    console.error("Wishlist proxy save error", err);
-    return Response.json({ error: "Wishlist save failed" }, { status: 502 });
-  }
-
-  return Response.json({ wishlist: updated });
-};
+export const loader = ({ request }) => handle(request);
+export const action = ({ request }) => handle(request);

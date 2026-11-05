@@ -100,12 +100,17 @@ _Audit date: 2026-11-05 · Repo: `~/LIVE/apps/wishlist` · Target API: **2026-10
 - [ ] Install via dev config on the dev store and click through the admin pages (needs Peter: CLI login/interactive).
 - [ ] The customer account extension is still on `2025-07`. That's intentional: its code rewrite is Phase 4.
 
-### Phase 2 – Data model & server (1 day)
-- [ ] Declare `customer.metafields.app.wishlist` (`list.product_reference`) in TOML.
-- [ ] Rewrite `wishlist.server.js`: `readWishlist` returns GIDs plus a digest, and `applyWishlistChange(action, ids)` uses `metafieldsSet` + `compareDigest` with one retry. Supported actions are `add / remove / merge`, with a cap (e.g. 100).
-- [ ] Have both routes use the shared handler; delete `replace`.
-- [ ] Write a one-off migration script that copies `custom.wishlist_products` JSON → `$app.wishlist` GIDs and drops deleted products.
-- [ ] Add unit tests for dedupe, cap and merge.
+### Phase 2 – Data model & server ✅ code done 2026-11-05
+- [x] Declared `[customer.metafields.app.wishlist]` (`list.product_reference`; admin `merchant_read`, storefront `public_read`, customer account `read_write`) in **both** app configs.
+- [x] Split the logic in two:
+  - `app/lib/wishlist-core.js` (pure): ID normalising, request parsing, `applyChange`. Newest items go first, with a cap of 100 (the Shopify list max is 128).
+  - `app/lib/wishlist.server.js` (GraphQL): reads and writes `$app:wishlist`. Writes use `metafieldsSet` + `compareDigest` (null on first write), with one retry on `STALE_OBJECT`, then a 409. An empty list deletes the metafield.
+- [x] Only **ACTIVE products** can be added: IDs are checked server-side, and the client's titles and prices are ignored.
+- [x] **Migration happens lazily, so no script is needed.** If `$app:wishlist` doesn't exist yet, the read falls back to legacy `custom.wishlist_products`, and the next write saves those items to the new metafield. That covers Peter's 3-item test record on EU live.
+- [x] Both routes use one shared `handleWishlistApi`. `replace` still exists for the current account page, but it can **only remove**, never add. The proxy now trusts only the signed `logged_in_customer_id` query param, not the unsigned header.
+- [x] Responses are compatible with the current clients: `{ ids, added, removed, wishlist: [hydrated products] }`. Hydrated prices are in the shop currency (EUR) until Phases 3–4 render live market prices. `added`/`removed` are there ready for the Klaviyo events in Phase 5.
+- [x] 12 unit tests (`pnpm test`, `node:test`); all GraphQL validated against 2026-10. Build and lint pass. Proxy smoke test: a valid signature gets through, a forged one returns 400.
+- [ ] On the dev store, confirm `featuredMedia` returns images with the current scopes (the validator listed `read_files` among possible scopes). Also confirm the dashboard's `metafieldDefinitions(namespace: "$app")` resolves.
 
 ### Phase 3 – Theme app extension (1–1½ days)
 - [ ] Render the initial state from Liquid; send only GIDs from the client.

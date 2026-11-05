@@ -18,7 +18,8 @@
     "graphql-codegen": "graphql-codegen",
     "vite": "vite",
     "typecheck": "react-router typegen && tsc --noEmit",
-    "deploy:dev": "shopify app deploy --config dev"
+    "deploy:dev": "shopify app deploy --config dev",
+    "test": "node --test \"app/**/*.test.js\""
   },
   "type": "module",
   "engines": {

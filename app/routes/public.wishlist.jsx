@@ -1,97 +1,28 @@
+// Customer account UI extension backend. The extension sends its session token as a Bearer header.
+// Phase 4 moves the account page to the Customer Account API and retires this route.
 import { authenticate, unauthenticated } from "../shopify.server";
-import {
-  dedupeById,
-  readWishlist,
-  writeWishlist,
-} from "../lib/wishlist.server";
+import { handleWishlistApi } from "../lib/wishlist.server";
 
-export const loader = async ({ request }) => {
-  const { sessionToken, cors } = await authenticate.public.customerAccount(
-    request
-  );
-
-  const customerId = sessionToken.sub;
-  if (!customerId) {
-    return cors(Response.json({ error: "Customer not logged in" }, { status: 401 }));
-  }
-
-  const shop = sessionToken.dest?.replace(/^https?:\/\//, "");
-  if (!shop) {
-    return cors(Response.json({ error: "Missing shop context" }, { status: 400 }));
-  }
-  const { admin } = await unauthenticated.admin(shop);
-
-  try {
-    const wishlist = await readWishlist(admin, customerId);
-    return cors(Response.json({ wishlist }));
-  } catch (err) {
-    console.error("Customer account wishlist fetch error", err);
-    return cors(Response.json({ error: "Wishlist fetch failed" }, { status: 502 }));
-  }
-};
-
-export const action = async ({ request }) => {
-  const { sessionToken, cors } = await authenticate.public.customerAccount(
-    request
-  );
+async function handle(request) {
+  const { sessionToken, cors } = await authenticate.public.customerAccount(request);
 
   if (request.method === "OPTIONS") {
     return cors(new Response(null, { status: 204 }));
   }
 
-  const customerId = sessionToken.sub;
-  if (!customerId) {
-    return cors(Response.json({ error: "Customer not logged in" }, { status: 401 }));
-  }
-
-  let payload;
-  try {
-    payload = await request.json();
-  } catch {
-    return cors(Response.json({ error: "Invalid JSON payload" }, { status: 400 }));
-  }
-
   const shop = sessionToken.dest?.replace(/^https?:\/\//, "");
   if (!shop) {
     return cors(Response.json({ error: "Missing shop context" }, { status: 400 }));
   }
   const { admin } = await unauthenticated.admin(shop);
 
-  let current = [];
-  try {
-    current = await readWishlist(admin, customerId);
-  } catch (err) {
-    console.error("Customer account wishlist fetch error", err);
-    return cors(Response.json({ error: "Wishlist fetch failed" }, { status: 502 }));
-  }
+  const { status, body } = await handleWishlistApi({
+    admin,
+    customerId: sessionToken.sub ?? null,
+    request,
+  });
+  return cors(Response.json(body, { status }));
+}
 
-  const actionType = payload?.action;
-  const product = payload?.product;
-  const incoming = payload?.wishlist;
-  let updated = current;
-
-  if (actionType === "add" && product?.id) {
-    updated = dedupeById([...current, product]);
-  } else if (actionType === "remove" && product?.id) {
-    updated = current.filter((item) => item?.id !== product.id);
-  } else if (actionType === "sync" && Array.isArray(incoming)) {
-    updated = dedupeById([...current, ...incoming]);
-  } else if (actionType === "replace" && Array.isArray(incoming)) {
-    updated = dedupeById(incoming);
-  } else {
-    return cors(Response.json({ error: "Unsupported action" }, { status: 400 }));
-  }
-
-  if (JSON.stringify(current) === JSON.stringify(updated)) {
-    return cors(Response.json({ wishlist: updated }));
-  }
-
-  try {
-    await writeWishlist(admin, customerId, updated);
-  } catch (err) {
-    console.error("Customer account wishlist save error", err);
-    return cors(Response.json({ error: "Wishlist save failed" }, { status: 502 }));
-  }
-
-  return cors(Response.json({ wishlist: updated }));
-};
+export const loader = ({ request }) => handle(request);
+export const action = ({ request }) => handle(request);
