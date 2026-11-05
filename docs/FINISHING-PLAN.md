@@ -192,6 +192,15 @@ How it works:
   - The CLI (3.92.1) accepted the `[events]` config, so no CLI update is needed for dev.
   - Test data cleaned up.
   - Also fixed: `shopify.web.toml` `webhooks_path` was restored, because the CLI's dev-start test webhook was 404ing on `/api/webhooks`.
+- [x] **Klaviyo setup started (2026-11-05, EU account `Vqfqg4`, "Spotlight Oral Care (EU)"):**
+  - Email drafts created, styled like the cart-abandon email. Nothing is attached to a flow, so nothing can send.
+    - `SydAZc` · DRAFT Wishlist reminder 1 · Saved for you (EU)
+    - `TU5sEy` · DRAFT Wishlist reminder 2 · Still on your wishlist (EU)
+    - Both use `{{ event.ProductName / URL / ImageURL / Price / Currency }}`. Email 1 was render-checked with sample data.
+  - Exit metrics already exist: Shopify **Placed Order** `R8GQhP`, **Ordered Product** `VXAGy3`.
+  - **Gotcha:** test events sent through the Klaviyo MCP connector are filed under the "Klaviyo MCP Server" source. That created metrics `TxjqSr` (Added) and `Wva9gL` (Removed), which the app will **never** write to, because the app's private-key events land under "API". **Don't build the flow on those two.** Delete them in Klaviyo → Analytics → Metrics. (There are 3 backfill test events on Peter's profile, which are harmless.)
+  - **Fix:** run `scripts/klaviyo-create-metrics.sh <email>` with `KLAVIYO_PRIVATE_KEY` set. It sends 2 backfill events (they can't trigger flows) that create the **API-source** metrics. Then the draft flow can be built on those.
+  - An old **"Favorited Item"** metric `UAXDXS` (2022) exists, probably from an earlier favourites app. It's unrelated, so I've left it alone.
 - [ ] **API key:** create a Klaviyo private API key with **only `events:write`**. Set it yourself: `fly secrets set KLAVIYO_PRIVATE_KEY=… -a wishlist-2026-app`, or in local `.env` for dev. Don't paste it in chat.
 - [ ] **Account:** confirm which Klaviyo account is EU, and whether UK shares it.
 - [ ] **Klaviyo flow:** "Wishlist reminder".
