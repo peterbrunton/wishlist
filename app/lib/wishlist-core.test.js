@@ -95,3 +95,24 @@ test("applyChange caps the list and drops the oldest", () => {
   assert.ok(!r.next.includes(gid(MAX_ITEMS)), "oldest item dropped");
   assert.deepEqual(r.removed, [gid(MAX_ITEMS)]);
 });
+
+// Request shapes sent by the extension versions released in March 2026 (still live until
+// `shopify app deploy`). The new backend must keep accepting them during the release window.
+test("legacy client payloads are still accepted", () => {
+  const snapshot = (n) => ({
+    id: gid(n),
+    handle: "h",
+    title: "T",
+    onlineStoreUrl: "/products/h",
+    featuredImage: { url: "https://cdn/x.jpg" },
+    priceRange: { minVariantPrice: { amount: "5.02", currencyCode: "EUR" } },
+  });
+  assert.deepEqual(parseRequestBody({ action: "add", product: snapshot(1) }), { action: "add", ids: [gid(1)] });
+  assert.deepEqual(parseRequestBody({ action: "remove", product: snapshot(1) }), { action: "remove", ids: [gid(1)] });
+  assert.deepEqual(parseRequestBody({ action: "sync", wishlist: [snapshot(1), snapshot(2)] }), {
+    action: "merge",
+    ids: [gid(1), gid(2)],
+  });
+  const replace = parseRequestBody({ action: "replace", wishlist: [snapshot(2)] });
+  assert.deepEqual(applyChange([gid(1), gid(2)], replace.action, replace.ids).next, [gid(2)]);
+});

@@ -222,12 +222,23 @@ How it works:
   - Step 4 (`fly deploy` of the new code) only as part of the Phase 7 release.
   - Set `KLAVIYO_PRIVATE_KEY` and the trimmed `SCOPES` with `fly secrets set --stage`.
 
-### Phase 7 – QA & release (1 day)
-- [ ] Test matrix: guest add → toast → login → merge; logged-in add/remove; two tabs at once; collection page request count (should be 0 GETs); multi-currency market; the account page in each language.
-- [ ] `shopify app deploy` a new version **(ask before running)** → install/update on EU live → add the block to an unpublished theme → publish with the next theme release.
-- [ ] Update the README to match the shipped design; delete the outdated docs.
+### Phase 7 – QA & release ✅ prepared 2026-11-05 (the release itself is Peter's, see `docs/RELEASE.md`)
+- [x] **Live impact checked:** the EU `[PRODUCTION]` theme has **no** wishlist block in any product/collection/index/search template (36 files scanned), so releasing the app doesn't change the storefront until the block is added.
+- [x] **Release-window compatibility:** the March extension versions stay live until release and send `add`/`remove` with product objects, `sync`, and `replace`. They read `payload.wishlist`. The new backend accepts all of these (new test) and keeps `/public/wishlist`, so the order is **backend first, then the app version**.
+- [x] `docs/RELEASE.md`:
+  - A 14-row QA matrix for the dev store.
+  - The production order: hosting → staged secrets → `fly deploy` → `shopify app deploy --no-release` → `shopify app release` → open the app → accounts editor → theme on an unpublished copy → Klaviyo flow live.
+  - Post-release checks, rollback, and follow-up cleanup.
+- [x] README rewritten for the shipped design (it replaces the March overview, which named the wrong metafield and the Flow design). CHANGELOG replaced (it was the Remix template's). `docs/build-from-scratch.md` removed (stale).
+- [x] **`.git.bak/` was committed in the first commit and pushed to GitHub.** It's an abandoned nested repo with no commits and 120 loose objects. I scanned it: no real secrets, only a `SHOPIFY_API_SECRET=xxx` placeholder in an old doc. It's now untracked and ignored, and still on disk. It remains in git history on `origin/main`, which is harmless.
+- [x] Full verification:
+  - 23/23 tests, lint and the production build pass.
+  - Theme Check: 0 offenses.
+  - `shopify app build` passes for **both** dev and prod configs.
+  - The Dockerfile replay on a clean checkout passes.
+- [ ] **Peter:** push the branch and open a PR, run the dev-store QA matrix (RELEASE.md §A), then the production release (§B).
 
-**Estimate:** about 6–8 working days in total.
+**Estimate:** about 6–8 working days. Code phases 0–7 were done on 2026-11-05. What remains is dev-store QA plus the production release steps, which Peter runs.
 
 ---
 

@@ -29,3 +29,6 @@ yarn.lock
 # Local copies of production databases (see docs/HOSTING.md)
 *.sqlite
 *.sqlite-journal
+
+# Abandoned nested repo from Dec 2025 (kept on disk, not tracked)
+.git.bak/
