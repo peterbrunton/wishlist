@@ -1,4 +1,6 @@
-# Learn more about configuring your app at https://shopify.dev/docs/apps/tools/cli/configuration
+# PRODUCTION app config — "Wishlist 2026" (installed on eu.spotlightoralcare.com)
+# Do NOT run `shopify app dev` against this file. Use `pnpm dev` (dev config) instead.
+# Deploy only with explicit sign-off: `shopify app deploy --config shopify.app.toml`.
 
 client_id = "d75bf2a3b790b8d12feea88f394dd616"
 name = "Wishlist 2026"
@@ -6,7 +8,8 @@ application_url = "https://wishlist-2026-app.fly.dev"
 embedded = true
 
 [build]
-automatically_update_urls_on_dev = true
+# Never let `app dev` repoint the live app to a tunnel
+automatically_update_urls_on_dev = false
 
 [webhooks]
 api_version = "2026-10"

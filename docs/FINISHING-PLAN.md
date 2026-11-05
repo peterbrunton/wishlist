@@ -88,7 +88,15 @@ _Audit date: 2026-11-05 · Repo: `~/LIVE/apps/wishlist` · Target API: **2026-10
 - [x] Scopes trimmed to `read_customers, read_products, write_customers`.
 - [x] Webhooks declared in TOML: `app/uninstalled`, `app/scopes_update`, plus GDPR compliance topics → `webhooks.compliance.jsx`.
 - [x] All GraphQL validated against 2026-10. `pnpm build` and `pnpm lint` pass. Prod server smoke test: `/` and `/auth/login` return 200, and calls without credentials are rejected.
-- [ ] **Before running `shopify app dev`:** `shopify.app.toml` points at the **production** app (client_id `d75bf…`) with `automatically_update_urls_on_dev = true`. Running dev would repoint the live app's URLs and app proxy to a tunnel. To avoid that, create a separate dev app config (`shopify app config link` → `shopify.app.dev.toml`, a new dev app on `spotlightoralcaredev`) and run `shopify app dev --config dev`.
+- [x] **Dev/prod configs separated (2026-11-05):**
+  - `shopify.app.dev.toml` → the existing dev app **wishlist-2026** (`0e19…`, previously used with a Cloudflare tunnel) on `spotlightoralcaredev`. URLs update automatically on dev.
+  - `shopify.app.toml` → **production** Wishlist 2026 (`d75bf…`), now with `automatically_update_urls_on_dev = false`.
+  - `pnpm dev` = `shopify app dev --config dev`; `pnpm deploy` = production (ask first); `pnpm deploy:dev` = dev app.
+  - `shopify app config use dev` is set as this checkout's local default.
+  - Known dev caveats:
+    - The customer account extension hardcodes `https://wishlist-2026-app.fly.dev`, so in dev it calls the **prod** backend and will fail auth. Phase 4 removes that call.
+    - If the production app is also installed on the dev store, both apps claim `/apps/wishlist`. Uninstall the prod app from the dev store if the proxy misbehaves.
+    - Two unused apps, both called "wishlist" (`ed31…`, `b2b8…`, URLs `example.com`), can be deleted in the Dev Dashboard (Peter).
 - [ ] Install via dev config on the dev store and click through the admin pages (needs Peter: CLI login/interactive).
 - [ ] The customer account extension is still on `2025-07`. That's intentional: its code rewrite is Phase 4.
 

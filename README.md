@@ -1,3 +1,20 @@
+## Development
+
+| Config | App | Store | Use |
+| --- | --- | --- | --- |
+| `shopify.app.dev.toml` | wishlist-2026 (dev) | spotlightoralcaredev | `pnpm dev` |
+| `shopify.app.toml` | Wishlist 2026 (production) | eu.spotlightoralcare.com | `pnpm deploy`, only with sign-off |
+
+```bash
+nvm use          # Node 24 (.nvmrc)
+pnpm install
+pnpm dev         # shopify app dev --config dev
+```
+
+Never run `shopify app dev` against `shopify.app.toml`. It's the live app.
+
+---
+
 ## Wishlist App – Technical Overview
 
 This document captures the end-to-end flow for the wishlist experience that now spans the Shopify Online Store, Customer Account UI, and the Remix admin app. It reflects the current implementation in this repo and highlights the remaining gaps (e.g. toast for guest users and Flow automations).

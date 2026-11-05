@@ -1,0 +1,40 @@
+# DEV app config — "wishlist-2026" on spotlightoralcaredev.myshopify.com
+# Use: `pnpm dev` (runs `shopify app dev --config dev`).
+# URLs below are placeholders; `shopify app dev` rewrites them to the tunnel each run.
+# Keep scopes, webhooks and proxy in sync with shopify.app.toml (production).
+
+client_id = "0e190ece95535190607a1cac997ed81c"
+name = "wishlist-2026"
+application_url = "https://example.com"
+embedded = true
+
+[build]
+automatically_update_urls_on_dev = true
+
+[webhooks]
+api_version = "2026-10"
+
+  [[webhooks.subscriptions]]
+  topics = [ "app/uninstalled" ]
+  uri = "/webhooks/app/uninstalled"
+
+  [[webhooks.subscriptions]]
+  topics = [ "app/scopes_update" ]
+  uri = "/webhooks/app/scopes_update"
+
+  # GDPR compliance topics (EU store)
+  [[webhooks.subscriptions]]
+  compliance_topics = [ "customers/data_request", "customers/redact", "shop/redact" ]
+  uri = "/webhooks/compliance"
+
+[app_proxy]
+url = "https://example.com/apps/wishlist"
+subpath = "wishlist"
+prefix = "apps"
+
+[access_scopes]
+# Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
+scopes = "read_customers,read_products,write_customers"
+
+[auth]
+redirect_urls = [ "https://example.com/auth/callback" ]
