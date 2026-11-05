@@ -112,15 +112,28 @@ _Audit date: 2026-11-05 · Repo: `~/LIVE/apps/wishlist` · Target API: **2026-10
 - [x] 12 unit tests (`pnpm test`, `node:test`); all GraphQL validated against 2026-10. Build and lint pass. Proxy smoke test: a valid signature gets through, a forged one returns 400.
 - [ ] On the dev store, confirm `featuredMedia` returns images with the current scopes (the validator listed `read_files` among possible scopes). Also confirm the dashboard's `metafieldDefinitions(namespace: "$app")` resolves.
 
-### Phase 3 – Theme app extension (1–1½ days)
-- [ ] Render the initial state from Liquid; send only GIDs from the client.
-- [ ] Use one shared state promise and a single event bus so every button for a product updates together.
-- [ ] Keep the observer always on, or listen to Horizon section-render events.
-- [ ] Move all strings to `locales/*.json` for the EU store languages (pull the list from Markets).
-- [ ] Add block settings for icon size, colour and placement, plus an optional label.
-- [ ] Optional: an app embed with a header count, and an `/apps/wishlist` storefront page.
-- [ ] Test in Horizon 4.x on an **unpublished** theme copy: product page, product cards, quick add, search.
-- [ ] Run `shopify theme check` on the theme that uses the block.
+### Phase 3 – Theme app extension ✅ code done 2026-11-05
+- [x] **Initial state comes from Liquid.** The block reads `customer.metafields['$app'].wishlist`, so logged-in customers trigger **0 requests on page load**. If the list has more than 50 items (Liquid's loop limit), the page makes one shared GET.
+- [x] Product lookup order is `closest.product` → `product`. Horizon `_product-card`, `_product-details` and the product sections all accept `@app`. The old `card_product` fallback was dropped because it was never in scope for an app block.
+- [x] The client sends **only product GIDs**, so all the price, title and image data attributes are gone. Old snapshot objects in localStorage are converted to GIDs automatically.
+- [x] **One shared state:**
+  - Every button for the same product updates together.
+  - Guest items merge with one POST on login.
+  - Each product has a pending lock, so a double-click sends one request.
+  - A failed request rolls back the heart and shows an error toast.
+  - A `wishlist:change` DOM event (`{ ids, count }`) is ready for a header count later.
+  - Guests stay in sync across tabs via the `storage` event.
+- [x] The MutationObserver is **always on**, so Horizon section re-renders, filtering and quick view get bound. Clicks inside card links no longer navigate.
+- [x] **Translations:** storefront strings in `en / de / fr / es`, matching the store's published locales. German uses informal "du" like the theme. Theme editor labels are in `en.default.schema.json`.
+- [x] **Settings:** icon size (16–40 px), icon colour (blank = text colour), show label, and optional custom text overrides. The new setting IDs mean old saved English labels no longer override translations.
+- [x] **Accessibility:** `aria-pressed`, `aria-label`, `aria-busy`, a focus ring, and a toast with `role=status` + `aria-live`. Reduced motion is respected. CSS has moved to `assets/wishlist-icon.css`.
+- [x] Checks:
+  - `shopify theme check` on the extension: 0 offenses.
+  - Shopify validator: all 8 files valid.
+  - ESLint passes.
+  - Headless jsdom behaviour test: **21/21** (guest, logged-in, merge, rollback, double-click, late-bound blocks). The test harness is in the session scratchpad and isn't committed.
+- [ ] Optional / Peter decision #3: an app embed with a header count, and an `/apps/wishlist` storefront page.
+- [ ] Test in Horizon 4.x on an **unpublished** theme copy on the dev store: product page, product cards, quick add, search, the DE/FR/ES locales, and a non-EUR market.
 
 ### Phase 4 – Customer account extension (1 day)
 - [ ] Upgrade to `api_version = "2026-10"`, Preact + `@shopify/ui-extensions` 2026.10.x, Polaris web components.

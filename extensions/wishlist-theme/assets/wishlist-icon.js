@@ -1,342 +1,272 @@
 (function () {
-  const STORAGE_KEY = "wishlist";
+  "use strict";
 
-  const proxyEndpoint = `${(window.Shopify?.routes?.root || "").replace(/\/$/, "")}/apps/wishlist`;
-  const loginUrl = window.Shopify?.routes?.account_login_url || "/account/login";
-  const defaultCurrency =
-    window.Shopify?.currency?.active ||
-    window.Shopify?.currency?.current ||
-    document.documentElement.getAttribute("data-shopify-currency") ||
-    "USD";
+  if (window.__wishlistApp) return;
 
-  const state = {
-    loaded: false,
-    items: [],
-    customerId: null,
+  var STORAGE_KEY = "wishlist";
+  var LIQUID_LIST_LIMIT = 50;
+  var PRODUCT_GID = /^gid:\/\/shopify\/Product\/\d+$/;
+  var root = (window.Shopify && window.Shopify.routes && window.Shopify.routes.root) || "/";
+  var PROXY_URL = root.replace(/\/?$/, "/") + "apps/wishlist";
+
+  var state = {
+    loggedIn: null,
+    saved: new Set(),
+    known: false,
+    pending: new Set(),
+    ready: null,
+    ensuring: null,
   };
 
-  let toastElement = null;
-  let toastTimeout = null;
+  function toGid(value) {
+    var raw = value && typeof value === "object" ? value.id : value;
+    if (typeof raw === "number") raw = String(raw);
+    if (typeof raw !== "string") return null;
+    if (PRODUCT_GID.test(raw)) return raw;
+    return /^\d+$/.test(raw) ? "gid://shopify/Product/" + raw : null;
+  }
 
-  const ensureToastElement = () => {
-    if (toastElement) {
-      return toastElement;
-    }
-
-    toastElement = document.createElement("div");
-    toastElement.setAttribute("role", "status");
-    toastElement.setAttribute("aria-live", "polite");
-    toastElement.style.position = "fixed";
-    toastElement.style.left = "50%";
-    toastElement.style.bottom = "24px";
-    toastElement.style.transform = "translateX(-50%)";
-    toastElement.style.background = "rgba(0, 0, 0, 0.85)";
-    toastElement.style.color = "#fff";
-    toastElement.style.padding = "12px 18px";
-    toastElement.style.borderRadius = "999px";
-    toastElement.style.fontSize = "14px";
-    toastElement.style.fontWeight = "500";
-    toastElement.style.boxShadow = "0 8px 16px rgba(0, 0, 0, 0.25)";
-    toastElement.style.zIndex = "2147483647";
-    toastElement.style.opacity = "0";
-    toastElement.style.pointerEvents = "auto";
-    toastElement.style.transition = "opacity 150ms ease";
-    document.body.appendChild(toastElement);
-    return toastElement;
-  };
-
-  const setToastContent = (toast, message) => {
-    while (toast.firstChild) {
-      toast.removeChild(toast.firstChild);
-    }
-
-    const textNode = document.createElement("span");
-    textNode.textContent = message;
-    toast.appendChild(textNode);
-
-    const spacer = document.createElement("span");
-    spacer.textContent = " ";
-    toast.appendChild(spacer);
-
-    const link = document.createElement("a");
-    link.href = loginUrl;
-    link.textContent = "Log in";
-    link.style.color = "#fff";
-    link.style.textDecoration = "underline";
-    link.style.fontWeight = "600";
-    link.style.marginLeft = "6px";
-    link.setAttribute("aria-label", "Log in to your account");
-    toast.appendChild(link);
-  };
-
-  const showGuestToast = (message) => {
-    const toast = ensureToastElement();
-    const displayMessage =
-      message ||
-      "Log in to keep your wishlist synced across devices.";
-
-    setToastContent(toast, displayMessage);
-    toast.style.opacity = "1";
-
-    if (toastTimeout) {
-      window.clearTimeout(toastTimeout);
-    }
-
-    toastTimeout = window.setTimeout(() => {
-      toast.style.opacity = "0";
-    }, 4000);
-  };
-
-  const dedupeById = (items = []) => {
-    const map = new Map();
-    items.forEach((item) => {
-      if (item && item.id) {
-        map.set(item.id, item);
+  function normalize(list) {
+    var out = [];
+    var seen = new Set();
+    (Array.isArray(list) ? list : []).forEach(function (item) {
+      var gid = toGid(item);
+      if (gid && !seen.has(gid)) {
+        seen.add(gid);
+        out.push(gid);
       }
     });
-    return Array.from(map.values());
-  };
+    return out;
+  }
 
-  const readLocal = () => {
+  function readLocal() {
     try {
-      const raw = window.localStorage.getItem(STORAGE_KEY);
-      return raw ? JSON.parse(raw) : [];
+      return normalize(JSON.parse(window.localStorage.getItem(STORAGE_KEY) || "[]"));
     } catch (err) {
-      console.error("Wishlist local read failed", err);
       return [];
     }
-  };
+  }
 
-  const writeLocal = (items) => {
+  function writeLocal(ids) {
     try {
-      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(items ?? []));
+      if (ids.length) {
+        window.localStorage.setItem(STORAGE_KEY, JSON.stringify(ids));
+      } else {
+        window.localStorage.removeItem(STORAGE_KEY);
+      }
     } catch (err) {
-      console.error("Wishlist local write failed", err);
+      // Storage can be unavailable (private mode, blocked cookies); the in-memory state still works.
     }
-  };
+  }
 
-  const buildProductPayload = (dataset) => {
-    const cents = Number(dataset.productPrice);
-    const amount =
-      Number.isFinite(cents) && !Number.isNaN(cents) ? (cents / 100).toFixed(2) : null;
-
-    let imageUrl = dataset.productImage || null;
-    if (imageUrl && imageUrl.startsWith("//")) {
-      imageUrl = `https:${imageUrl}`;
-    }
-
-    return {
-      id: dataset.productId,
-      handle: dataset.productHandle || null,
-      title: dataset.productTitle || "",
-      onlineStoreUrl: dataset.productUrl || null,
-      featuredImage: imageUrl ? { url: imageUrl } : null,
-      priceRange: {
-        minVariantPrice: {
-          amount,
-          currencyCode: dataset.productCurrency || defaultCurrency,
-        },
-      },
-    };
-  };
-
-  const fetchServer = async (params = {}) => {
-    const search = new URLSearchParams({ ...params });
-
-    const response = await fetch(`${proxyEndpoint}?${search.toString()}`, {
-      credentials: "include",
+  function request(method, body) {
+    return fetch(PROXY_URL, {
+      method: method,
+      credentials: "same-origin",
+      headers: body ? { "Content-Type": "application/json", Accept: "application/json" } : { Accept: "application/json" },
+      body: body ? JSON.stringify(body) : undefined,
+    }).then(function (res) {
+      return res
+        .json()
+        .catch(function () {
+          return {};
+        })
+        .then(function (payload) {
+          if (!res.ok) throw new Error(payload.error || "HTTP " + res.status);
+          return normalize(payload.ids);
+        });
     });
+  }
 
-    if (!response.ok) {
-      throw new Error(`Wishlist fetch failed with status ${response.status}`);
-    }
+  function blocks() {
+    return document.querySelectorAll("[data-wishlist-block][data-wishlist-bound]");
+  }
 
-    const payload = await response.json();
-    return Array.isArray(payload?.wishlist) ? payload.wishlist : [];
-  };
-
-  const postServer = async (body) => {
-    const response = await fetch(proxyEndpoint, {
-      method: "POST",
-      credentials: "include",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(body),
+  function render() {
+    blocks().forEach(function (block) {
+      var active = state.saved.has(block.dataset.productId);
+      var button = block.querySelector("[data-wishlist-button]");
+      if (!button) return;
+      var label = active ? block.dataset.labelRemove : block.dataset.labelAdd;
+      button.setAttribute("aria-pressed", active ? "true" : "false");
+      button.setAttribute("aria-label", label);
+      button.title = label;
+      if (state.pending.has(block.dataset.productId)) {
+        button.setAttribute("aria-busy", "true");
+      } else {
+        button.removeAttribute("aria-busy");
+      }
+      var text = block.querySelector("[data-wishlist-label]");
+      if (text) text.textContent = label;
+      block.classList.toggle("is-active", active);
     });
+  }
 
-    if (!response.ok) {
-      throw new Error(`Wishlist update failed with status ${response.status}`);
+  function announce() {
+    var ids = Array.from(state.saved);
+    document.dispatchEvent(
+      new CustomEvent("wishlist:change", { detail: { ids: ids, count: ids.length } }),
+    );
+  }
+
+  function setSaved(ids, known) {
+    state.saved = new Set(ids);
+    if (known) state.known = true;
+    render();
+    announce();
+  }
+
+  var toast = null;
+  var toastTimer = null;
+
+  function showToast(block, message, withLogin) {
+    if (!message) return;
+    if (!toast) {
+      toast = document.createElement("div");
+      toast.className = "wishlist-app-toast";
+      toast.setAttribute("role", "status");
+      toast.setAttribute("aria-live", "polite");
+      document.body.appendChild(toast);
     }
-
-    const payload = await response.json();
-    return Array.isArray(payload?.wishlist) ? payload.wishlist : [];
-  };
-
-  const ensureState = async (customerId) => {
-    const normalizedCustomerId = customerId || null;
-    if (state.loaded && state.customerId !== normalizedCustomerId) {
-      state.loaded = false;
-      state.items = [];
-      state.customerId = null;
+    toast.replaceChildren();
+    var text = document.createElement("span");
+    text.textContent = message;
+    toast.appendChild(text);
+    if (withLogin && block.dataset.loginUrl) {
+      var link = document.createElement("a");
+      link.href = block.dataset.loginUrl;
+      link.textContent = block.dataset.toastLogin || "Log in";
+      toast.appendChild(link);
     }
+    toast.dataset.visible = "true";
+    window.clearTimeout(toastTimer);
+    toastTimer = window.setTimeout(function () {
+      toast.dataset.visible = "false";
+    }, 4000);
+  }
 
-    if (state.loaded) {
-      return state.items;
-    }
+  function start(firstBlock) {
+    state.loggedIn = firstBlock.dataset.loggedIn === "true";
 
-    state.customerId = normalizedCustomerId;
-    let localItems = readLocal();
-
-    if (customerId) {
-      try {
-        if (localItems.length) {
-          const merged = await postServer({
-            action: "sync",
-            wishlist: localItems,
-          });
-          state.items = merged;
-          writeLocal([]);
-        }
-      } catch (err) {
-        console.error("Wishlist sync error", err);
-        state.items = dedupeById(localItems);
-      }
-
-      try {
-        const remoteItems = await fetchServer();
-        state.items = dedupeById([...(state.items || []), ...remoteItems]);
-      } catch (err) {
-        console.error("Wishlist remote fetch error", err);
-        state.items = dedupeById(state.items.length ? state.items : localItems);
-      }
-    } else {
-      state.items = dedupeById(localItems);
-    }
-
-    state.loaded = true;
-    return state.items;
-  };
-
-  const updateLocalState = (items) => {
-    state.items = items;
-    if (!state.customerId) {
-      writeLocal(items);
-    }
-  };
-
-  const toggleWishlist = async (product, customerId, block) => {
-    const exists = state.items.some((item) => item?.id === product.id);
-    const previous = state.items.slice();
-
-    const updated = exists
-      ? state.items.filter((item) => item?.id !== product.id)
-      : dedupeById([...state.items, product]);
-
-    updateLocalState(updated);
-
-    if (!customerId) {
-      if (!exists) {
-        const message = block?.dataset?.loginMessage || null;
-        showGuestToast(message);
-      }
-      return updated;
-    }
-
-    try {
-      const serverItems = await postServer({
-        action: exists ? "remove" : "add",
-        product,
+    if (!state.loggedIn) {
+      state.saved = new Set(readLocal());
+      state.known = true;
+      state.ready = Promise.resolve();
+      window.addEventListener("storage", function (event) {
+        if (event.key === STORAGE_KEY) setSaved(readLocal(), true);
       });
-      updateLocalState(serverItems);
-      return serverItems;
-    } catch (err) {
-      console.error("Wishlist server update error", err);
-      updateLocalState(previous);
-      return previous;
-    }
-  };
-
-  const setButtonState = (block, active) => {
-    const button = block.querySelector("[data-wishlist-button]");
-    const iconOutline = block.querySelector('[data-wishlist-icon="outline"]');
-    const iconSolid = block.querySelector('[data-wishlist-icon="solid"]');
-
-    if (!button) return;
-
-    button.setAttribute("aria-pressed", active ? "true" : "false");
-    block.classList.toggle("is-active", Boolean(active));
-
-    if (iconOutline && iconSolid) {
-      iconOutline.style.display = active ? "none" : "inline-flex";
-      iconSolid.style.display = active ? "inline-flex" : "none";
-    }
-
-    if (button.dataset.titleAdd && button.dataset.titleRemove) {
-      button.title = active
-        ? button.dataset.titleRemove
-        : button.dataset.titleAdd;
-    }
-  };
-
-  const initializeBlock = async (block) => {
-    const dataset = block.dataset;
-    const button = block.querySelector("[data-wishlist-button]");
-
-    if (!button || !dataset.productId) {
       return;
     }
 
-    const product = buildProductPayload(dataset);
-    const customerId = dataset.customerId || null;
-
-    await ensureState(customerId);
-    const isSaved = state.items.some((item) => item?.id === product.id);
-    setButtonState(block, isSaved);
-
-    button.addEventListener("click", async () => {
-      button.disabled = true;
-      const updated = await toggleWishlist(product, customerId, block);
-      setButtonState(
-        block,
-        updated.some((item) => item?.id === product.id)
-      );
-      button.disabled = false;
-    });
-  };
-
-  const initBlocks = () => {
-    const blocks = document.querySelectorAll("[data-wishlist-block]");
-    if (!blocks.length) {
-      return false;
+    var guestItems = readLocal();
+    if (guestItems.length) {
+      state.ready = request("POST", { action: "merge", wishlist: guestItems })
+        .then(function (ids) {
+          writeLocal([]);
+          setSaved(ids, true);
+        })
+        .catch(function () {});
+    } else {
+      state.ready = Promise.resolve();
     }
-    blocks.forEach((block) => {
-      if (block.dataset.wishlistBound) return;
-      block.dataset.wishlistBound = "true";
-      initializeBlock(block);
-    });
-    return true;
-  };
+  }
 
-  const start = () => {
-    const hasBlocks = initBlocks();
-    if (hasBlocks) {
+  function ensureKnown() {
+    if (state.known || state.ensuring) return;
+    state.ensuring = request("GET")
+      .then(function (ids) {
+        setSaved(ids, true);
+      })
+      .catch(function () {})
+      .finally(function () {
+        state.ensuring = null;
+      });
+  }
+
+  function toggle(block) {
+    var id = block.dataset.productId;
+    if (!id || state.pending.has(id)) return;
+
+    var wasSaved = state.saved.has(id);
+    var previous = Array.from(state.saved);
+    var next = new Set(state.saved);
+    if (wasSaved) next.delete(id);
+    else next.add(id);
+    setSaved(Array.from(next), false);
+
+    if (!state.loggedIn) {
+      writeLocal(Array.from(state.saved));
+      if (!wasSaved) showToast(block, block.dataset.toastGuest, true);
       return;
     }
 
-    const observer = new MutationObserver(() => {
-      initBlocks();
-    });
+    state.pending.add(id);
+    render();
+    Promise.resolve(state.ready)
+      .then(function () {
+        return request("POST", { action: wasSaved ? "remove" : "add", productId: id });
+      })
+      .then(function (ids) {
+        state.pending.delete(id);
+        setSaved(ids, true);
+      })
+      .catch(function () {
+        state.pending.delete(id);
+        setSaved(previous, false);
+        showToast(block, block.dataset.toastError, false);
+      });
+  }
 
-    observer.observe(document.documentElement, {
-      childList: true,
-      subtree: true,
-    });
+  function bind(block) {
+    block.dataset.wishlistBound = "true";
+    if (state.loggedIn === null) start(block);
+
+    var id = block.dataset.productId;
+    if (state.loggedIn && !state.known) {
+      if (block.dataset.saved === "true") state.saved.add(id);
+      if (Number(block.dataset.wishlistCount) > LIQUID_LIST_LIMIT) ensureKnown();
+    }
+
+    var button = block.querySelector("[data-wishlist-button]");
+    if (button) {
+      button.addEventListener("click", function (event) {
+        event.preventDefault();
+        event.stopPropagation();
+        toggle(block);
+      });
+    }
+  }
+
+  var scheduled = false;
+
+  function scan() {
+    scheduled = false;
+    var fresh = document.querySelectorAll("[data-wishlist-block]:not([data-wishlist-bound])");
+    if (!fresh.length) return;
+    fresh.forEach(bind);
+    render();
+  }
+
+  function schedule() {
+    if (scheduled) return;
+    scheduled = true;
+    window.requestAnimationFrame(scan);
+  }
+
+  window.__wishlistApp = {
+    getIds: function () {
+      return Array.from(state.saved);
+    },
   };
+
+  function init() {
+    scan();
+    new MutationObserver(schedule).observe(document.body, { childList: true, subtree: true });
+  }
 
   if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", start);
+    document.addEventListener("DOMContentLoaded", init);
   } else {
-    start();
+    init();
   }
 })();

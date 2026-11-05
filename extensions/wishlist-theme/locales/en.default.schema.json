@@ -1,0 +1,17 @@
+{
+  "blocks": {
+    "wishlist_button": {
+      "name": "Wishlist button",
+      "settings": {
+        "icon_size": "Icon size",
+        "icon_color": "Icon colour",
+        "icon_color_info": "Leave empty to match the surrounding text colour.",
+        "show_label": "Show text next to the icon",
+        "overrides_header": "Custom text",
+        "overrides_info": "Leave empty to use the built-in translations (English, German, French, Spanish).",
+        "label_add_override": "Add to wishlist text",
+        "label_remove_override": "Remove from wishlist text"
+      }
+    }
+  }
+}
