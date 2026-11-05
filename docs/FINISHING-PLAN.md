@@ -205,10 +205,22 @@ How it works:
 - [ ] **Prices:** product prices in events are in shop currency (EUR). For UK shoppers, use the catalog's localized price in Klaviyo templates, or the `URL` (the product page shows the market price).
 
 
-### Phase 6 – Hosting (½ day)
-- [ ] Move Fly to an EU region (`ams`/`fra`), keep `min_machines_running = 1`, and use a real health check route instead of `/`.
-- [ ] Set up nightly SQLite volume snapshots (sessions only, so easy to rebuild, but saves reinstalling).
-- [ ] Put secrets in `fly secrets`; make sure `.env` stays out of git (currently it is).
+### Phase 6 – Hosting ✅ config done 2026-11-05 (the Fly changes themselves are Peter's to run, see `docs/HOSTING.md`)
+- [x] `fly.toml`:
+  - `primary_region = "lhr"` (closest Fly region to the IE/UK markets).
+  - One always-on machine: `auto_stop_machines = "stop"` + `min_machines_running = 1` (that's the combination Fly applies a minimum to).
+  - Health check on `GET /healthz`.
+  - Volume `snapshot_retention = 14`.
+  - Comment: SQLite = exactly one machine.
+- [x] `/healthz` route: `SELECT 1` against SQLite, returning 200 `ok` / 503. Responds in about 3 ms locally.
+- [x] Dockerfile: Node 24, `--prod=false` install, and **Prisma generated at build time**. `docker-start` now only runs migrations and serves, so there are no engine downloads on boot. `.dockerignore` excludes git/docs/dist/tests/sqlite.
+- [x] Checks: Docker isn't installed locally, so I replayed the Dockerfile steps in a clean copy of the repo (`NODE_ENV=production`): install, build, migrate and serve all work, and `/healthz` returns 200.
+- [x] `.gitignore` now covers `*.sqlite`, so a downloaded production DB backup can't be committed.
+- [x] `docs/HOSTING.md` runbook: back up → `fly volumes fork --region lhr` → `fly machine clone --attach-volume` → retire syd → `fly deploy`. It also covers verification, rollback, cleanup and secrets.
+- [ ] **Peter:**
+  - `fly auth login`, then run HOSTING.md steps 0–3 (back up, fork, move). These are safe to do before release: same code, new region.
+  - Step 4 (`fly deploy` of the new code) only as part of the Phase 7 release.
+  - Set `KLAVIYO_PRIVATE_KEY` and the trimmed `SCOPES` with `fly secrets set --stage`.
 
 ### Phase 7 – QA & release (1 day)
 - [ ] Test matrix: guest add → toast → login → merge; logged-in add/remove; two tabs at once; collection page request count (should be 0 GETs); multi-currency market; the account page in each language.

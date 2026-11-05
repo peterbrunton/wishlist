@@ -5,3 +5,11 @@ node_modules
 .env.*
 prisma/dev.sqlite
 prisma/dev.sqlite-journal
+.git
+.git.bak
+.shopify
+extensions/*/dist
+extensions/*/node_modules
+docs
+*.test.js
+*.sqlite

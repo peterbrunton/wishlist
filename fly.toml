@@ -1,5 +1,7 @@
+# Fly.io config for the PRODUCTION Wishlist 2026 backend.
+# Region move + volume migration steps: docs/HOSTING.md
 app = "wishlist-2026-app"
-primary_region = "syd"
+primary_region = "lhr"
 
 [build]
 
@@ -9,16 +11,21 @@ HOST = "0.0.0.0"
 NODE_ENV = "production"
 DATABASE_URL = "file:/data/prod.sqlite"
 
+# SQLite lives on this volume, so the app must run as exactly ONE machine.
 [mounts]
 source = "wishlist_data"
 destination = "/data"
+snapshot_retention = 14
 
 [http_service]
 internal_port = 3000
 force_https = true
+# Storefront proxy calls must not wait for a cold start (the first request took ~27s from syd).
+# With one machine and min_machines_running = 1 it never stops (Fly applies the minimum only
+# when auto_stop is "stop"/"suspend", and recommends enabling auto-stop and auto-start together).
 auto_stop_machines = "stop"
 auto_start_machines = true
-min_machines_running = 0
+min_machines_running = 1
 
   [http_service.concurrency]
   type = "requests"
@@ -29,8 +36,8 @@ min_machines_running = 0
   grace_period = "30s"
   interval = "15s"
   method = "GET"
-  path = "/"
-  timeout = "10s"
+  path = "/healthz"
+  timeout = "5s"
 
 [[vm]]
 memory = "512mb"
