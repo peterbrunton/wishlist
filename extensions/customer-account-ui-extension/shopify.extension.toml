@@ -1,9 +1,4 @@
-# Learn more about configuring your Customer account UI extension:
-# https://shopify.dev/api/customer-account-ui-extensions/unstable/configuration
-
-# The version of APIs your extension will receive. Learn more:
-# https://shopify.dev/docs/api/usage/versioning
-api_version = "2025-07"
+api_version = "2026-07"
 
 [[extensions]]
 name = "wishlist-page"
@@ -12,8 +7,12 @@ uid = "bc7ed5a2-dae8-0291-b4b2-46fe268521762e1ba10a"
 type = "ui_extension"
 
 [[extensions.targeting]]
-module = "./src/index.jsx"
+module = "./src/WishlistPage.jsx"
 target = "customer-account.page.render"
+
+# Customer Account API (read/write $app:wishlist) + Storefront API (live product data)
+[extensions.capabilities]
+api_access = true
 
 [[extensions]]
 name = "wishlist-nav"
@@ -27,4 +26,3 @@ target = "customer-account.order-index.block.render"
 
 [extensions.capabilities]
 api_access = true
-network_access = true

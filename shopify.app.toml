@@ -1,19 +1,77 @@
-# Learn more about configuring your app at https://shopify.dev/docs/apps/tools/cli/configuration
+# PRODUCTION app config — "Wishlist 2026" (installed on eu.spotlightoralcare.com)
+# Do NOT run `shopify app dev` against this file. Use `pnpm dev` (dev config) instead.
+# Deploy only with explicit sign-off: `shopify app deploy --config shopify.app.toml`.
 
 client_id = "d75bf2a3b790b8d12feea88f394dd616"
 name = "Wishlist 2026"
-application_url = "https://example.com"
+application_url = "https://wishlist-2026-app.fly.dev"
 embedded = true
 
 [build]
-automatically_update_urls_on_dev = true
+# Never let `app dev` repoint the live app to a tunnel
+automatically_update_urls_on_dev = false
 
 [webhooks]
-api_version = "2026-04"
+api_version = "2026-10"
+
+  [[webhooks.subscriptions]]
+  topics = [ "app/uninstalled" ]
+  uri = "/webhooks/app/uninstalled"
+
+  [[webhooks.subscriptions]]
+  topics = [ "app/scopes_update" ]
+  uri = "/webhooks/app/scopes_update"
+
+  # GDPR compliance topics (EU store)
+  [[webhooks.subscriptions]]
+  compliance_topics = [ "customers/data_request", "customers/redact", "shop/redact" ]
+  uri = "/webhooks/compliance"
+
+[app_proxy]
+url = "https://wishlist-2026-app.fly.dev/apps/wishlist"
+subpath = "wishlist"
+prefix = "apps"
+
+# Events API: Shopify notifies us whenever $app:wishlist changes, from ANY write path
+# (storefront proxy, customer account page). Handled by app/routes/events.wishlist.jsx,
+# which diffs against the last snapshot and sends Klaviyo Added/Removed events.
+[events]
+api_version = "2026-10"
+
+  [[events.subscription]]
+  handle = "wishlist-changed"
+  topic = "Customer"
+  actions = [ "update" ]
+  triggers = [ "customer.metafield(namespace: '$app', key: 'wishlist').*" ]
+  uri = "/events/wishlist"
+  query = """
+  query wishlist_event_payload($customerId: ID!, $metafieldNamespace: String!, $metafieldKey: String!) {
+    customer(id: $customerId) {
+      id
+      defaultEmailAddress {
+        emailAddress
+      }
+      metafield(namespace: $metafieldNamespace, key: $metafieldKey) {
+        value
+        updatedAt
+      }
+    }
+  }
+  """
+
+# App-owned wishlist storage: $app:wishlist on each customer.
+# Product references (not snapshots) so price/currency/image are always live per market.
+[customer.metafields.app.wishlist]
+name = "Wishlist"
+description = "Products this customer saved to their wishlist (managed by the Wishlist app)."
+type = "list.product_reference"
+access.admin = "merchant_read"
+access.storefront = "public_read"
+access.customer_account = "read_write"
 
 [access_scopes]
 # Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
-scopes = "read_customers,read_metaobjects,read_products,write_customers,write_metaobjects,write_products"
+scopes = "customer_read_customers,customer_write_customers,read_customers,read_products,write_customers"
 
 [auth]
-redirect_urls = [ "https://example.com/api/auth" ]
+redirect_urls = [ "https://wishlist-2026-app.fly.dev/auth/callback" ]

@@ -1,5 +1,16 @@
 {
-  "general": {
-    "name": "Wishlist theme extension"
+  "wishlist": {
+    "button": {
+      "add": "Add to wishlist",
+      "remove": "Remove from wishlist"
+    },
+    "toast": {
+      "guest": "Saved on this device. Log in to keep your wishlist on every device.",
+      "login": "Log in",
+      "error": "Couldn't update your wishlist. Please try again."
+    },
+    "editor": {
+      "no_product": "Add this block to a product page or a product card."
+    }
   }
 }

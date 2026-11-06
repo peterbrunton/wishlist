@@ -1,0 +1,16 @@
+{
+  "wishlist": {
+    "button": {
+      "add": "Zur Wunschliste hinzufügen",
+      "remove": "Von der Wunschliste entfernen"
+    },
+    "toast": {
+      "guest": "Auf diesem Gerät gespeichert. Melde dich an, um deine Wunschliste auf allen Geräten zu behalten.",
+      "login": "Anmelden",
+      "error": "Deine Wunschliste konnte nicht aktualisiert werden. Bitte versuche es erneut."
+    },
+    "editor": {
+      "no_product": "Füge diesen Block einer Produktseite oder Produktkarte hinzu."
+    }
+  }
+}

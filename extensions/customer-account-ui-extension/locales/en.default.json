@@ -1,3 +1,29 @@
 {
-  "earnPoints": "You've earned 1,000 points from this order. You've been upgraded to Platinum tier."
+  "page": {
+    "title": "Wishlist",
+    "loading": "Loading your wishlist",
+    "error_heading": "We couldn't load your wishlist",
+    "error_body": "Please check your connection and try again.",
+    "retry": "Try again",
+    "empty": "You haven't saved any products yet. Tap the heart on any product to save it here."
+  },
+  "item": {
+    "view": "View",
+    "add_to_cart": "Add to cart",
+    "remove": "Remove",
+    "remove_label": "Remove {{title}} from your wishlist",
+    "removed": "Removed from your wishlist",
+    "remove_failed": "Couldn't remove this product. Please try again.",
+    "sold_out": "Sold out",
+    "removing": "Removing…"
+  },
+  "nav": {
+    "heading": "Your wishlist",
+    "count": {
+      "one": "You have {{count}} saved product.",
+      "other": "You have {{count}} saved products."
+    },
+    "empty": "Save products you love and find them here.",
+    "open": "Open wishlist"
+  }
 }

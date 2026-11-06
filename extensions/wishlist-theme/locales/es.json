@@ -1,0 +1,16 @@
+{
+  "wishlist": {
+    "button": {
+      "add": "Añadir a la lista de deseos",
+      "remove": "Quitar de la lista de deseos"
+    },
+    "toast": {
+      "guest": "Guardado en este dispositivo. Inicia sesión para conservar tu lista de deseos en todos tus dispositivos.",
+      "login": "Iniciar sesión",
+      "error": "No se pudo actualizar tu lista de deseos. Inténtalo de nuevo."
+    },
+    "editor": {
+      "no_product": "Añade este bloque a una página de producto o a una tarjeta de producto."
+    }
+  }
+}

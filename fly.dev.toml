@@ -1,0 +1,46 @@
+# Fly.io config for the DEV/STAGING backend of the dev app "wishlist-2026" (spotlightoralcaredev).
+# Use: fly deploy --config fly.dev.toml   (see docs/STAGING.md)
+app = "wishlist-2026-dev"
+primary_region = "lhr"
+
+[build]
+
+[env]
+PORT = "3000"
+HOST = "0.0.0.0"
+NODE_ENV = "production"
+DATABASE_URL = "file:/data/dev.sqlite"
+SHOPIFY_APP_URL = "https://wishlist-2026-dev.fly.dev"
+SHOPIFY_API_KEY = "0e190ece95535190607a1cac997ed81c"
+SCOPES = "customer_read_customers,customer_write_customers,read_customers,read_products,write_customers"
+
+# SQLite lives on this volume, so the app must run as exactly ONE machine.
+[mounts]
+source = "wishlist_dev_data"
+destination = "/data"
+snapshot_retention = 5
+
+[http_service]
+internal_port = 3000
+force_https = true
+# Staging: allowed to sleep when idle (first request after a pause is slow, that is fine here).
+auto_stop_machines = "stop"
+auto_start_machines = true
+min_machines_running = 0
+
+  [http_service.concurrency]
+  type = "requests"
+  hard_limit = 250
+  soft_limit = 200
+
+[[http_service.checks]]
+  grace_period = "30s"
+  interval = "15s"
+  method = "GET"
+  path = "/healthz"
+  timeout = "5s"
+
+[[vm]]
+memory = "512mb"
+cpu_kind = "shared"
+cpus = 1

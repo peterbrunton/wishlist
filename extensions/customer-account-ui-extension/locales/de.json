@@ -1,0 +1,29 @@
+{
+  "page": {
+    "title": "Wunschliste",
+    "loading": "Deine Wunschliste wird geladen",
+    "error_heading": "Deine Wunschliste konnte nicht geladen werden",
+    "error_body": "Bitte überprüfe deine Verbindung und versuche es erneut.",
+    "retry": "Erneut versuchen",
+    "empty": "Du hast noch keine Produkte gespeichert. Tippe bei einem Produkt auf das Herz, um es hier zu speichern."
+  },
+  "item": {
+    "view": "Ansehen",
+    "add_to_cart": "In den Warenkorb",
+    "remove": "Entfernen",
+    "remove_label": "{{title}} von deiner Wunschliste entfernen",
+    "removed": "Von deiner Wunschliste entfernt",
+    "remove_failed": "Das Produkt konnte nicht entfernt werden. Bitte versuche es erneut.",
+    "sold_out": "Ausverkauft",
+    "removing": "Wird entfernt…"
+  },
+  "nav": {
+    "heading": "Deine Wunschliste",
+    "count": {
+      "one": "Du hast {{count}} gespeichertes Produkt.",
+      "other": "Du hast {{count}} gespeicherte Produkte."
+    },
+    "empty": "Speichere Produkte, die dir gefallen, und finde sie hier wieder.",
+    "open": "Wunschliste öffnen"
+  }
+}
