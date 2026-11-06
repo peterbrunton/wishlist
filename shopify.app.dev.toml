@@ -1,11 +1,13 @@
 # DEV app config — "wishlist-2026" on spotlightoralcaredev.myshopify.com
 # Use: `pnpm dev` (runs `shopify app dev --config dev`).
-# URLs below are placeholders; `shopify app dev` rewrites them to the tunnel each run.
+# Released versions run on the staging backend https://wishlist-2026-dev.fly.dev (docs/STAGING.md).
+# `pnpm dev` still rewrites the URLs to a tunnel while it runs; afterwards run `pnpm deploy:dev`
+# to point the dev app back at staging.
 # Keep scopes, webhooks and proxy in sync with shopify.app.toml (production).
 
 client_id = "0e190ece95535190607a1cac997ed81c"
 name = "wishlist-2026"
-application_url = "https://example.com"
+application_url = "https://wishlist-2026-dev.fly.dev"
 embedded = true
 
 [build]
@@ -28,7 +30,7 @@ api_version = "2026-10"
   uri = "/webhooks/compliance"
 
 [app_proxy]
-url = "https://example.com/apps/wishlist"
+url = "https://wishlist-2026-dev.fly.dev/apps/wishlist"
 subpath = "wishlist"
 prefix = "apps"
 
@@ -74,4 +76,4 @@ access.customer_account = "read_write"
 scopes = "read_customers,read_products,write_customers"
 
 [auth]
-redirect_urls = [ "https://example.com/auth/callback" ]
+redirect_urls = [ "https://wishlist-2026-dev.fly.dev/auth/callback" ]

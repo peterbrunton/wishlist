@@ -7,6 +7,7 @@
     "config:link": "shopify app config link",
     "generate": "shopify app generate",
     "deploy": "shopify app deploy --config shopify.app.toml",
+    "deploy:dev": "shopify app deploy --config dev",
     "config:use": "shopify app config use",
     "env": "shopify app env",
     "start": "react-router-serve ./build/server/index.js",
@@ -18,7 +19,6 @@
     "graphql-codegen": "graphql-codegen",
     "vite": "vite",
     "typecheck": "react-router typegen && tsc --noEmit",
-    "deploy:dev": "shopify app deploy --config dev",
     "test": "node --test \"app/**/*.test.js\""
   },
   "type": "module",
