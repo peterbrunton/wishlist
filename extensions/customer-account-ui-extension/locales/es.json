@@ -8,13 +8,14 @@
     "empty": "Aún no has guardado ningún producto. Toca el corazón de cualquier producto para guardarlo aquí."
   },
   "item": {
-    "view": "Ver producto",
+    "view": "Ver",
     "add_to_cart": "Añadir al carrito",
     "remove": "Quitar",
     "remove_label": "Quitar {{title}} de tu lista de deseos",
     "removed": "Quitado de tu lista de deseos",
     "remove_failed": "No se pudo quitar este producto. Inténtalo de nuevo.",
-    "sold_out": "Agotado"
+    "sold_out": "Agotado",
+    "removing": "Eliminando…"
   },
   "nav": {
     "heading": "Tu lista de deseos",

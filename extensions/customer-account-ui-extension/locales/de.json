@@ -8,13 +8,14 @@
     "empty": "Du hast noch keine Produkte gespeichert. Tippe bei einem Produkt auf das Herz, um es hier zu speichern."
   },
   "item": {
-    "view": "Produkt ansehen",
+    "view": "Ansehen",
     "add_to_cart": "In den Warenkorb",
     "remove": "Entfernen",
     "remove_label": "{{title}} von deiner Wunschliste entfernen",
     "removed": "Von deiner Wunschliste entfernt",
     "remove_failed": "Das Produkt konnte nicht entfernt werden. Bitte versuche es erneut.",
-    "sold_out": "Ausverkauft"
+    "sold_out": "Ausverkauft",
+    "removing": "Wird entfernt…"
   },
   "nav": {
     "heading": "Deine Wunschliste",

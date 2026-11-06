@@ -8,13 +8,14 @@
     "empty": "Vous n'avez encore enregistré aucun produit. Touchez le cœur sur un produit pour l'enregistrer ici."
   },
   "item": {
-    "view": "Voir le produit",
+    "view": "Voir",
     "add_to_cart": "Ajouter au panier",
     "remove": "Retirer",
     "remove_label": "Retirer {{title}} de votre liste de souhaits",
     "removed": "Retiré de votre liste de souhaits",
     "remove_failed": "Impossible de retirer ce produit. Veuillez réessayer.",
-    "sold_out": "Épuisé"
+    "sold_out": "Épuisé",
+    "removing": "Suppression…"
   },
   "nav": {
     "heading": "Votre liste de souhaits",

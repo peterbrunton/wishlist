@@ -8,13 +8,14 @@
     "empty": "You haven't saved any products yet. Tap the heart on any product to save it here."
   },
   "item": {
-    "view": "View product",
+    "view": "View",
     "add_to_cart": "Add to cart",
     "remove": "Remove",
     "remove_label": "Remove {{title}} from your wishlist",
     "removed": "Removed from your wishlist",
     "remove_failed": "Couldn't remove this product. Please try again.",
-    "sold_out": "Sold out"
+    "sold_out": "Sold out",
+    "removing": "Removing…"
   },
   "nav": {
     "heading": "Your wishlist",

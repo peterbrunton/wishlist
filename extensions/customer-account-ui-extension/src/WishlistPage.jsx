@@ -113,49 +113,54 @@ function WishlistItem({ product, busy, onRemove }) {
   const price = product.priceRange?.minVariantPrice;
   const cartUrl = addToCartUrl(product);
 
+  const image = product.featuredImage?.url ? (
+    <s-image
+      src={product.featuredImage.url}
+      alt={product.featuredImage.altText || product.title}
+      aspectRatio="1"
+      objectFit="cover"
+      borderRadius="base"
+      loading="lazy"
+    ></s-image>
+  ) : null;
+
+  // Card: clickable image + title open the product; one full-width action; a small Remove link.
   return (
-    <s-section>
-      <s-stack direction="block" gap="base">
-        {product.featuredImage?.url ? (
-          <s-image
-            src={product.featuredImage.url}
-            alt={product.featuredImage.altText || product.title}
-            aspectRatio="1"
-            objectFit="cover"
-            loading="lazy"
-          ></s-image>
-        ) : null}
-        <s-stack direction="block" gap="small-200">
+    <s-stack direction="block" gap="small-200">
+      {product.url && image ? <s-clickable href={product.url}>{image}</s-clickable> : image}
+      <s-stack direction="block" gap="small-500">
+        {product.url ? (
+          <s-link href={product.url}>{product.title}</s-link>
+        ) : (
           <s-text type="strong">{product.title}</s-text>
-          {price ? (
-            <s-text color="subdued">
-              {shopify.i18n.formatCurrency(Number(price.amount), { currency: price.currencyCode })}
-            </s-text>
-          ) : null}
-          {!product.availableForSale ? <s-badge tone="neutral">{t("item.sold_out")}</s-badge> : null}
-        </s-stack>
-        <s-stack direction="block" gap="small-200">
-          {cartUrl ? (
-            <s-button variant="primary" href={cartUrl}>
-              {t("item.add_to_cart")}
-            </s-button>
-          ) : null}
-          {product.url ? (
-            <s-button variant={cartUrl ? "secondary" : "primary"} href={product.url}>
-              {t("item.view")}
-            </s-button>
-          ) : null}
-          <s-button
-            variant="secondary"
-            tone="critical"
-            loading={busy}
-            accessibilityLabel={String(t("item.remove_label", { title: product.title }))}
-            onClick={onRemove}
-          >
-            {t("item.remove")}
-          </s-button>
-        </s-stack>
+        )}
+        {price ? (
+          <s-text color="subdued">
+            {shopify.i18n.formatCurrency(Number(price.amount), { currency: price.currencyCode })}
+          </s-text>
+        ) : null}
+        {!product.availableForSale ? <s-badge tone="neutral">{t("item.sold_out")}</s-badge> : null}
       </s-stack>
-    </s-section>
+      {cartUrl ? (
+        <s-button variant="primary" inlineSize="fill" href={cartUrl}>
+          {t("item.add_to_cart")}
+        </s-button>
+      ) : product.url ? (
+        <s-button variant="secondary" inlineSize="fill" href={product.url}>
+          {t("item.view")}
+        </s-button>
+      ) : null}
+      {busy ? (
+        <s-text color="subdued">{t("item.removing")}</s-text>
+      ) : (
+        <s-link
+          tone="critical"
+          accessibilityLabel={String(t("item.remove_label", { title: product.title }))}
+          onClick={onRemove}
+        >
+          {t("item.remove")}
+        </s-link>
+      )}
+    </s-stack>
   );
 }
