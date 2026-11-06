@@ -65,7 +65,7 @@ Afterwards, run `shopify app dev clean --config dev` to remove the dev preview.
    shopify app release --config shopify.app.toml --version 2.0.0
    ```
 6. **EU admin → Apps → Wishlist 2026:** open the app once. This refreshes the offline session (expiring tokens). The dashboard should show the definition found.
-7. **Checkout & accounts editor:** add the **Wishlist** page (Apps sidebar) and the Orders-page wishlist block. Then Settings → Customer accounts → menu → add a **Wishlist** item.
+7. **Checkout & accounts editor:** add the **Wishlist** page via **Apps sidebar → wishlist-page ⊕** (required; a menu link alone shows "There's a problem loading this page") and the Orders-page wishlist block. Then Settings → Customer accounts → menu → add a **Wishlist** item.
 8. **Theme:** on an **unpublished copy** of `[PRODUCTION]`, add the Wishlist button block, run the QA rows 2–8 on live data, then publish with the next planned theme release (Peter).
 9. **Klaviyo:** once events show up in Klaviyo (Metrics → *Added to Wishlist*), switch the "Wishlist reminder" flow to Live. See FINISHING-PLAN → Phase 5.
 

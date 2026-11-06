@@ -14,6 +14,8 @@ None of this touches the live EU store or the production app (`shopify.app.toml`
   - The `$app:wishlist` definition only appeared after **uninstall + reinstall** of the dev app. A release onto the existing install (made by `app dev` on 5 Nov) didn't create it.
   - The proxy came up as `/apps/wishlist-1`, then `-3`, because the production app "Wishlist 2026" was also installed on the dev store and held `/apps/wishlist`. Peter uninstalled it from the dev store (the live EU store is unaffected) and its stale 25 Mar dev preview was cleaned. After reinstalling, the dev app got `/apps/wishlist`.
   - Verified: dashboard "Metafield definition found" (list.product_reference); storefront `/apps/wishlist` → `{"ids":[],"wishlist":[]}` served by staging.
+- 2026-11-06: **2.0.0-staging.3** fixes the blank customer-account pages. The extension had no `jsxImportSource: "preact"`, so esbuild compiled the JSX for React and Preact's `render()` drew nothing. Fixed with `extensions/customer-account-ui-extension/tsconfig.json`; the bundles now have no React (28 KB / 23 KB).
+  - The full page also has to be **added from the editor's Apps sidebar** (Settings → Checkout → Customize → Apps → wishlist-page ⊕), not just linked in the menu. Done on the dev store, along with the menu item "Wishlist" and the wishlist-nav block on the Orders page.
 - Reinstall link: `https://admin.shopify.com/store/spotlightoralcaredev/oauth/install?client_id=0e190ece95535190607a1cac997ed81c`
 
 ## One-time setup
