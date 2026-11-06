@@ -125,10 +125,16 @@ export async function loadProducts(ids) {
   const { data, errors } = await shopify.query(
     `query WishlistProducts($ids: [ID!]!, $country: CountryCode, $language: LanguageCode)
       @inContext(country: $country, language: $language) {
+      shop {
+        primaryDomain {
+          url
+        }
+      }
       nodes(ids: $ids) {
         ... on Product {
           id
           title
+          handle
           onlineStoreUrl
           availableForSale
           featuredImage {
@@ -154,7 +160,17 @@ export async function loadProducts(ids) {
   );
   if (errors?.length && !data) throw new Error(errors[0].message);
 
-  const byId = new Map((data?.nodes ?? []).filter((n) => n?.id).map((n) => [n.id, n]));
+  // onlineStoreUrl is null when a product isn't published to the Online Store channel
+  // (or on some dev stores), so fall back to <primary domain>/products/<handle>.
+  const origin = data?.shop?.primaryDomain?.url?.replace(/\/$/, "") ?? "";
+  const byId = new Map(
+    (data?.nodes ?? [])
+      .filter((n) => n?.id)
+      .map((n) => [
+        n.id,
+        { ...n, url: n.onlineStoreUrl || (origin && n.handle ? `${origin}/products/${n.handle}` : null) },
+      ]),
+  );
   return ids.map((id) => byId.get(id)).filter(Boolean);
 }
 
@@ -164,9 +180,9 @@ export async function loadProducts(ids) {
  */
 export function addToCartUrl(product) {
   const variants = product.variants?.nodes ?? [];
-  if (!product.onlineStoreUrl || variants.length !== 1 || !variants[0].availableForSale) {
+  if (!product.url || variants.length !== 1 || !variants[0].availableForSale) {
     return null;
   }
   const variantId = variants[0].id.split("/").pop();
-  return `${new URL(product.onlineStoreUrl).origin}/cart/add?id=${variantId}&quantity=1`;
+  return `${new URL(product.url).origin}/cart/add?id=${variantId}&quantity=1`;
 }

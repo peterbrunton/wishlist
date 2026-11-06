@@ -140,8 +140,8 @@ function WishlistItem({ product, busy, onRemove }) {
               {t("item.add_to_cart")}
             </s-button>
           ) : null}
-          {product.onlineStoreUrl ? (
-            <s-button variant={cartUrl ? "secondary" : "primary"} href={product.onlineStoreUrl}>
+          {product.url ? (
+            <s-button variant={cartUrl ? "secondary" : "primary"} href={product.url}>
               {t("item.view")}
             </s-button>
           ) : null}
