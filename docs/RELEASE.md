@@ -8,12 +8,15 @@ Every step marked 🔴 changes production. Peter runs or approves each one. Noth
 
 **Current state (2026-11-05):**
 - Active app version is from 2026-03-31. Its extensions call `/apps/wishlist` and `/public/wishlist`, and it stores wishlists in `custom.wishlist_products`.
+- **The production Fly app `wishlist-2026-app` is SUSPENDED** (seen 2026-11-06), so the released March version's proxy and account page can't reach a backend. Resume it as part of B.1 (`docs/HOSTING.md`).
 - On EU live there is 1 legacy wishlist (Peter's test customer).
 - The production theme `[PRODUCTION]` has **no** wishlist block placed, so the release changes nothing on the storefront until the block is added.
 
 ---
 
-## A. QA on the dev store (`pnpm dev`, spotlightoralcaredev)
+## A. QA on the dev store (spotlightoralcaredev)
+
+Run it on the **released staging build** (`docs/STAGING.md`, version 2.0.0-staging.1) or on `pnpm dev`. In row 13, staging logs come from `fly logs -a wishlist-2026-dev`.
 
 | # | Check | Expected |
 | --- | --- | --- |

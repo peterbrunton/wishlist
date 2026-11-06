@@ -7,6 +7,10 @@ This gives the dev store a **released** version that keeps working without `pnpm
 
 None of this touches the live EU store or the production app (`shopify.app.toml` / `wishlist-2026-app`).
 
+## Status
+
+- 2026-11-06: staging created. Fly `wishlist-2026-dev` (machine `8577736a433098`, lhr), secret staged via `shopify app env show`, `/healthz` ok. Dev app version **2.0.0-staging.1** released (active), dev preview cleaned.
+
 ## One-time setup
 
 ```bash
@@ -15,7 +19,13 @@ fly apps create wishlist-2026-dev
 fly volumes create wishlist_dev_data --app wishlist-2026-dev --region lhr --size 1 --yes
 ```
 
-Secret: copy the dev app's **client secret** from Dev Dashboard → wishlist-2026 → Settings. Set it yourself; don't paste it in chat:
+Secret (no copy/paste needed):
+
+```bash
+S=$(shopify app env show --config dev 2>/dev/null | sed -n 's/.*SHOPIFY_API_SECRET=//p' | tr -d '[:space:]') && echo "length ${#S}" && fly secrets set SHOPIFY_API_SECRET="$S" -a wishlist-2026-dev --stage; unset S
+```
+
+Or copy the dev app's **client secret** from Dev Dashboard → wishlist-2026 → Settings. Set it yourself; don't paste it in chat:
 
 ```bash
 read -rs "S?wishlist-2026 client secret: " && fly secrets set SHOPIFY_API_SECRET="$S" -a wishlist-2026-dev --stage; unset S
@@ -29,6 +39,7 @@ Optional: add `KLAVIYO_PRIVATE_KEY` the same way to test real Klaviyo events fro
 fly deploy --config fly.dev.toml                  # backend first
 curl https://wishlist-2026-dev.fly.dev/healthz    # → ok
 pnpm deploy:dev                                   # = shopify app deploy --config dev (creates + releases a version)
+shopify app dev clean --config dev                # if a dev preview is still active, it overrides the release
 ```
 
 Then, in the dev store admin, open **Apps → wishlist-2026** once. This creates the offline session on the new backend; until then, proxy and event calls have no session. After that, run the QA matrix in `RELEASE.md` §A.
