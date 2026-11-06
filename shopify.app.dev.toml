@@ -73,7 +73,7 @@ access.customer_account = "read_write"
 
 [access_scopes]
 # Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
-scopes = "read_customers,read_products,write_customers"
+scopes = "customer_read_customers,customer_write_customers,read_customers,read_products,write_customers"
 
 [auth]
 redirect_urls = [ "https://wishlist-2026-dev.fly.dev/auth/callback" ]

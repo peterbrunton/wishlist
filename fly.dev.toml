@@ -12,7 +12,7 @@ NODE_ENV = "production"
 DATABASE_URL = "file:/data/dev.sqlite"
 SHOPIFY_APP_URL = "https://wishlist-2026-dev.fly.dev"
 SHOPIFY_API_KEY = "0e190ece95535190607a1cac997ed81c"
-SCOPES = "read_customers,read_products,write_customers"
+SCOPES = "customer_read_customers,customer_write_customers,read_customers,read_products,write_customers"
 
 # SQLite lives on this volume, so the app must run as exactly ONE machine.
 [mounts]

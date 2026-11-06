@@ -33,7 +33,7 @@ fly status -a wishlist-2026-app && fly volumes list -a wishlist-2026-app && fly 
 Expected secrets: `SHOPIFY_API_KEY`, `SHOPIFY_API_SECRET`, `SHOPIFY_APP_URL` (= `https://wishlist-2026-app.fly.dev`), `SCOPES`. Add Klaviyo now or later:
 
 ```bash
-fly secrets set KLAVIYO_PRIVATE_KEY=pk_xxx SCOPES=read_customers,read_products,write_customers -a wishlist-2026-app --stage
+fly secrets set KLAVIYO_PRIVATE_KEY=pk_xxx SCOPES=customer_read_customers,customer_write_customers,read_customers,read_products,write_customers -a wishlist-2026-app --stage
 ```
 
 (`--stage` saves the secrets without restarting; they apply on the next deploy.)

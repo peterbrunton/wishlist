@@ -16,6 +16,7 @@ None of this touches the live EU store or the production app (`shopify.app.toml`
   - Verified: dashboard "Metafield definition found" (list.product_reference); storefront `/apps/wishlist` → `{"ids":[],"wishlist":[]}` served by staging.
 - 2026-11-06: **2.0.0-staging.3** fixes the blank customer-account pages. The extension had no `jsxImportSource: "preact"`, so esbuild compiled the JSX for React and Preact's `render()` drew nothing. Fixed with `extensions/customer-account-ui-extension/tsconfig.json`; the bundles now have no React (28 KB / 23 KB).
   - The full page also has to be **added from the editor's Apps sidebar** (Settings → Checkout → Customize → Apps → wishlist-page ⊕), not just linked in the menu. Done on the dev store, along with the menu item "Wishlist" and the wishlist-nav block on the Orders page.
+- 2026-11-06: **staging.4–7**: the account page showed "couldn't load". The real error was `Access denied … customer_read_customers`. The Customer Account API needs **`customer_read_customers,customer_write_customers`** in `[access_scopes]` (added to both TOMLs and `SCOPES`), and the store has to approve the update prompt. The page now shows the error detail under the message. Grid: 4 across above 560px container width, otherwise 2. `s-grid` takes **one** `@container` condition + fallback; chaining two silently gives 1 column.
 - Reinstall link: `https://admin.shopify.com/store/spotlightoralcaredev/oauth/install?client_id=0e190ece95535190607a1cac997ed81c`
 
 ## One-time setup

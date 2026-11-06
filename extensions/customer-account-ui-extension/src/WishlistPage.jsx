@@ -12,15 +12,19 @@ function WishlistPage() {
   const [status, setStatus] = useState("loading");
   const [products, setProducts] = useState([]);
   const [removing, setRemoving] = useState(() => new Set());
+  const [errorDetail, setErrorDetail] = useState("");
 
   const load = useCallback(async () => {
     setStatus("loading");
+    let step = "read";
     try {
       const { ids } = await readWishlist();
+      step = "products";
       setProducts(await loadProducts(ids));
       setStatus("ready");
     } catch (err) {
-      console.error("Wishlist load failed", err);
+      console.error("Wishlist load failed", step, err);
+      setErrorDetail(`${step}: ${err?.message || String(err)}`);
       setStatus("error");
     }
   }, []);
@@ -67,6 +71,7 @@ function WishlistPage() {
         <s-banner heading={t("page.error_heading")} tone="critical">
           <s-stack direction="block" gap="base">
             <s-paragraph>{t("page.error_body")}</s-paragraph>
+            {errorDetail ? <s-paragraph>{`Details: ${errorDetail}`}</s-paragraph> : null}
             <s-button variant="secondary" onClick={load}>
               {t("page.retry")}
             </s-button>
@@ -85,7 +90,7 @@ function WishlistPage() {
       ) : (
         <s-query-container>
           <s-grid
-            gridTemplateColumns="@container (inline-size > 720px) 1fr 1fr 1fr, @container (inline-size > 440px) 1fr 1fr, 1fr"
+            gridTemplateColumns="@container (inline-size > 560px) 1fr 1fr 1fr 1fr, 1fr 1fr"
             gap="base"
           >
             {products.map((product) => (

@@ -49,7 +49,7 @@ Afterwards, run `shopify app dev clean --config dev` to remove the dev preview.
 1. **Hosting move (can happen days earlier):** `docs/HOSTING.md` steps 0–3. It's the same code in London on a forked volume, and you check it before retiring Sydney.
 2. **Secrets (staged, no restart):**
    ```bash
-   fly secrets set KLAVIYO_PRIVATE_KEY=pk_xxx SCOPES=read_customers,read_products,write_customers -a wishlist-2026-app --stage
+   fly secrets set KLAVIYO_PRIVATE_KEY=pk_xxx SCOPES=customer_read_customers,customer_write_customers,read_customers,read_products,write_customers -a wishlist-2026-app --stage
    ```
 3. 🔴 **Backend first:** `fly deploy -a wishlist-2026-app` (HOSTING.md step 4).
    - It stays compatible with the **currently released** extensions. `/public/wishlist` is kept, the legacy `add`/`sync`/`replace` payloads are accepted (`pnpm test` covers this), and responses still include the hydrated `wishlist` array.
