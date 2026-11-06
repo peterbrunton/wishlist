@@ -199,15 +199,18 @@ How it works:
     - Both use `{{ event.ProductName / URL / ImageURL / Price / Currency }}`. Email 1 was render-checked with sample data.
   - Exit metrics already exist: Shopify **Placed Order** `R8GQhP`, **Ordered Product** `VXAGy3`.
   - **Gotcha:** test events sent through the Klaviyo MCP connector are filed under the "Klaviyo MCP Server" source. That created metrics `TxjqSr` (Added) and `Wva9gL` (Removed), which the app will **never** write to, because the app's private-key events land under "API". **Don't build the flow on those two.** Delete them in Klaviyo → Analytics → Metrics. (There are 3 backfill test events on Peter's profile, which are harmless.)
-  - **Fix:** run `scripts/klaviyo-create-metrics.sh <email>` with `KLAVIYO_PRIVATE_KEY` set. It sends 2 backfill events (they can't trigger flows) that create the **API-source** metrics. Then the draft flow can be built on those.
+  - **Fix (done 2026-11-06):** Peter ran `scripts/klaviyo-create-metrics.sh` with the private key. The API-source metrics now exist: **Added to Wishlist `Y8dTRb`**, **Removed from Wishlist `TUm6dA`**. The script strips paste artefacts from the key and prints Klaviyo's error body on non-202.
   - An old **"Favorited Item"** metric `UAXDXS` (2022) exists, probably from an earlier favourites app. It's unrelated, so I've left it alone.
-- [ ] **API key:** create a Klaviyo private API key with **only `events:write`**. Set it yourself: `fly secrets set KLAVIYO_PRIVATE_KEY=… -a wishlist-2026-app`, or in local `.env` for dev. Don't paste it in chat.
+- [x] **API key:** created (Events access only). Still to do at release: set it via `fly secrets set`.
+  - Original note: create a Klaviyo private API key with **only `events:write`**. Set it yourself: `fly secrets set KLAVIYO_PRIVATE_KEY=… -a wishlist-2026-app`, or in local `.env` for dev. Don't paste it in chat.
 - [ ] **Account:** confirm which Klaviyo account is EU, and whether UK shares it.
-- [ ] **Klaviyo flow:** "Wishlist reminder".
-  - **Trigger:** metric *Added to Wishlist*.
-  - **Flow filters:**
-    - Has not placed order since starting this flow.
-    - Has not had *Removed from Wishlist* where ProductID equals the trigger's ProductID since starting the flow.
+- [x] **Klaviyo flow built as DRAFT (2026-11-06):** `Tp9N35` "DRAFT · Wishlist reminder (EU)" — https://www.klaviyo.com/flow/Tp9N35/edit. Both emails are in draft status, so nothing can send.
+  - Klaviyo copied the templates into flow-owned ones: email 1 `SL8Kqs` (template `UyyCUV`), email 2 `TVxAii` (template `Xwpmjg`). Edit those, not `SydAZc`/`TU5sEy`.
+  - Sender defaults: hello@spotlightoralcare.com / "Spotlight Oral Care". Re-entry: once per 2 weeks.
+  - **Trigger:** *Added to Wishlist* `Y8dTRb` (API source).
+  - **Flow filters (as built):**
+    - 0 × Placed Order `R8GQhP` since flow start.
+    - 0 × Removed from Wishlist `TUm6dA` since flow start. This means removing **any** item exits the flow. The per-product version (ProductID = trigger ProductID) isn't expressible via the API, so set it in the UI if wanted.
   - **Steps:** wait 1 day → email 1 (product block from event properties) → wait 6 days → email 2.
   - **Smart sending:** on. It only sends to profiles that can receive email marketing, which handles EU consent.
   - **Optional:** a price-drop / back-in-stock flow on the same metric.
