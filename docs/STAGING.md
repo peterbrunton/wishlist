@@ -10,6 +10,11 @@ None of this touches the live EU store or the production app (`shopify.app.toml`
 ## Status
 
 - 2026-11-06: staging created. Fly `wishlist-2026-dev` (machine `8577736a433098`, lhr), secret staged via `shopify app env show`, `/healthz` ok. Dev app version **2.0.0-staging.1** released (active), dev preview cleaned.
+- 2026-11-06 (later): **2.0.0-staging.2** released with Shopify CLI **5.0.1** (`npx @shopify/cli@5.0.1`). The global CLI is 3.92.1, which is too old.
+  - The `$app:wishlist` definition only appeared after **uninstall + reinstall** of the dev app. A release onto the existing install (made by `app dev` on 5 Nov) didn't create it.
+  - The proxy came up as `/apps/wishlist-1`, then `-3`, because the production app "Wishlist 2026" was also installed on the dev store and held `/apps/wishlist`. Peter uninstalled it from the dev store (the live EU store is unaffected) and its stale 25 Mar dev preview was cleaned. After reinstalling, the dev app got `/apps/wishlist`.
+  - Verified: dashboard "Metafield definition found" (list.product_reference); storefront `/apps/wishlist` → `{"ids":[],"wishlist":[]}` served by staging.
+- Reinstall link: `https://admin.shopify.com/store/spotlightoralcaredev/oauth/install?client_id=0e190ece95535190607a1cac997ed81c`
 
 ## One-time setup
 

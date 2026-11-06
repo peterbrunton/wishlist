@@ -41,6 +41,11 @@ Afterwards, run `shopify app dev clean --config dev` to remove the dev preview.
 
 ## B. Production release (in this order)
 
+**Before you start (lessons from staging, 2026-11-06):**
+- Use Shopify CLI **5.x** (`npx @shopify/cli@5.0.1 …` or upgrade the global one). The global 3.92.1 is too old.
+- On EU live, check that **no other app holds `/apps/wishlist`**. The theme JS hardcodes that path, and a clash gives `/apps/wishlist-N`. Check Settings → Apps → Wishlist 2026 → App Proxy URL after release, and look for the old "wishlist" apps (`ed31…`, `b2b8…`).
+- After release, check that the dashboard says **"Metafield definition found"**. On the dev store, the definition only appeared after a reinstall. On live, a reinstall would drop the legacy `custom.wishlist_products` fallback data only if you also delete it, which you won't. But try opening the app first, and if the definition is still missing, query `metafieldDefinitions(ownerType: CUSTOMER, namespace: "$app")` before deciding anything.
+
 1. **Hosting move (can happen days earlier):** `docs/HOSTING.md` steps 0–3. It's the same code in London on a forked volume, and you check it before retiring Sydney.
 2. **Secrets (staged, no restart):**
    ```bash
