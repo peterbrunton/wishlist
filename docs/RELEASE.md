@@ -16,26 +16,28 @@ Every step marked 🔴 changes production. Peter runs or approves each one. Noth
 
 ## A. QA on the dev store (spotlightoralcaredev)
 
-Run it on the **released staging build** (`docs/STAGING.md`, version 2.0.0-staging.1) or on `pnpm dev`. In row 13, staging logs come from `fly logs -a wishlist-2026-dev`.
+Run it on the **released staging build** (`docs/STAGING.md`, version 2.0.0-staging.9 or later) or on `pnpm dev`. In row 13, staging logs come from `fly logs -a wishlist-2026-dev`.
 
-| # | Check | Expected |
-| --- | --- | --- |
-| 1 | Admin: open the app | Dashboard shows "Metafield definition found" + the customer count. The setup guide renders. |
-| 2 | Theme editor (unpublished Horizon copy): add **Wishlist button** to the product info section and to a product card | Hearts render. Settings (size, colour, label) apply. |
-| 3 | Guest: heart a product | Heart fills. Toast "Saved on this device… Log in". **No** network request. |
-| 4 | Guest → log in | One `POST /apps/wishlist` (merge). The heart stays filled. localStorage key `wishlist` is cleared. |
-| 5 | Logged in: reload a collection page | **0** wishlist requests on load (DevTools → Network). Saved hearts are filled from Liquid. |
-| 6 | Logged in: heart / unheart; the same product in two places on a page | Both buttons update together. Double-click sends one request. |
-| 7 | Horizon: filter / sort / quick view on a collection | Newly rendered cards get working hearts. |
-| 8 | `?locale=de`, `fr`, `es` on the storefront | Button labels and toast are translated. |
-| 9 | Customer account → Wishlist page | Grid shows image, title and price. "Remove" works with a toast. The empty state shows after removing all. |
-| 10 | Account page in a **GBP** market (UK address / `?country=GB`) | Prices are in GBP. |
-| 11 | Account page "Add to cart" on a single-variant product | Lands on the cart with the item added. |
-| 12 | Orders page → wishlist block | "You have N saved products" → opens the Wishlist page. |
-| 13 | Terminal during 3–9 | `Wishlist events: … skipping N event(s)` for each change (no Klaviyo key in dev). |
-| 14 | Optional: set a **test** Klaviyo key in `.env`, heart a product with a test customer | The event shows up on that profile in Klaviyo → Metrics → *Added to Wishlist*. |
+| # | Check | Expected | Result |
+| --- | --- | --- | --- |
+| 1 | Admin: open the app | Dashboard shows "Metafield definition found" + the customer count. The setup guide renders. | ✅ 2026-11-06: "Metafield definition found", list.product_reference (after reinstall). |
+| 2 | Theme editor (unpublished Horizon copy): add **Wishlist button** to the product info section and to a product card | Hearts render. Settings (size, colour, label) apply. | ⚠️ Placed on the dev store **live** theme home page only. Blocks in unpublished "Horizon" (149187756222) point at the **previous** install and no longer render. Re-add them in the editor. |
+| 3 | Guest: heart a product | Heart fills. Toast "Saved on this device… Log in". **No** network request. | ✅ 2026-11-07: fills, label → "Remove from wishlist", guest toast + Log in link, localStorage set, **0** proxy requests. Reload keeps it filled; unheart clears it. |
+| 4 | Guest → log in | One `POST /apps/wishlist` (merge). The heart stays filled. localStorage key `wishlist` is cleared. | ⏳ Needs a customer login (Peter). |
+| 5 | Logged in: reload a collection page | **0** wishlist requests on load (DevTools → Network). Saved hearts are filled from Liquid. | ⏳ Needs a customer login (Peter). |
+| 6 | Logged in: heart / unheart; the same product in two places on a page | Both buttons update together. Double-click sends one request. | ⏳ Needs a customer login (Peter). |
+| 7 | Horizon: filter / sort / quick view on a collection | Newly rendered cards get working hearts. | ⏳ Blocked: no wishlist block on collection product cards yet (see row 2). |
+| 8 | `?locale=de`, `fr`, `es` on the storefront | Button labels and toast are translated. | ⚠️ Dev store has no de/fr/es languages (`/de` → 404). Locale files checked instead: same keys in every language, none blank or left in English. Theme check: 0 offences. |
+| 9 | Customer account → Wishlist page | Grid shows image, title and price. "Remove" works with a toast. The empty state shows after removing all. | ✅ 2026-11-06 (Peter): grid, image/title/price, View/Remove; 4 across desktop / 2 mobile. Remove + empty state still to confirm. |
+| 10 | Account page in a **GBP** market (UK address / `?country=GB`) | Prices are in GBP. | ⏳ Needs a customer login. |
+| 11 | Account page "Add to cart" on a single-variant product | Lands on the cart with the item added. | ⏳ Test products are multi-variant; needs a single-variant product. |
+| 12 | Orders page → wishlist block | "You have N saved products" → opens the Wishlist page. | ⏳ Needs a customer login. |
+| 13 | Terminal during 3–9 | `Wishlist events: … skipping N event(s)` for each change (no Klaviyo key in dev). | ⏳ Needs logged-in changes (guest saves don't fire events). |
+| 14 | Optional: set a **test** Klaviyo key in `.env`, heart a product with a test customer | The event shows up on that profile in Klaviyo → Metrics → *Added to Wishlist*. | Optional. |
 
 Afterwards, run `shopify app dev clean --config dev` to remove the dev preview.
+
+Also run on 2026-11-07: `pnpm test` (23/23 pass) and `shopify theme check --path extensions/wishlist-theme` (0 offences).
 
 ---
 
