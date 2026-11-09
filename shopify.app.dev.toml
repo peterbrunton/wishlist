@@ -61,6 +61,45 @@ api_version = "2026-10"
   }
   """
 
+# Price-drop alerts: fires when a variant price changes on an active product. Handled by
+# app/routes/events.price.jsx, which compares the lowest price with the stored baseline and sends
+# Klaviyo "Wishlist Price Drop" events to customers who have the product saved.
+  [[events.subscription]]
+  handle = "price-changed"
+  topic = "Product"
+  actions = [ "update" ]
+  triggers = [ "product.variants.price" ]
+  uri = "/events/price"
+  query_filter = "product.status:'ACTIVE'"
+  query = """
+  query price_drop_payload($productId: ID!, $variantsId: ID!) {
+    productVariant(id: $variantsId) {
+      id
+      price
+    }
+    product(id: $productId) {
+      id
+      status
+      title
+      handle
+      onlineStoreUrl
+      featuredMedia {
+        preview {
+          image {
+            url
+          }
+        }
+      }
+      priceRangeV2 {
+        minVariantPrice {
+          amount
+          currencyCode
+        }
+      }
+    }
+  }
+  """
+
 # App-owned wishlist storage: $app:wishlist on each customer.
 # Product references (not snapshots) so price/currency/image are always live per market.
 [customer.metafields.app.wishlist]

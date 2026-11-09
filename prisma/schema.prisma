@@ -45,3 +45,17 @@ model WishlistSnapshot {
 
   @@index([shop])
 }
+
+// Last lowest list price seen per product, so Product price deliveries (which carry only the new
+// price) can be turned into "Wishlist Price Drop" alerts. Seeded by the admin Sync button.
+model ProductPrice {
+  id           String   @id // "<shop>:<product gid>"
+  shop         String
+  productId    String
+  cents        Int      // priceRangeV2.minVariantPrice in minor units
+  currencyCode String
+  lastEventAt  DateTime // shopify-triggered-at of the last applied delivery (or sync time)
+  updatedAt    DateTime @updatedAt
+
+  @@index([shop])
+}

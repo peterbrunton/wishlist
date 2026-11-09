@@ -8,6 +8,7 @@ import { authenticate } from "../shopify.server";
 import db from "../db.server";
 import { hydrateProducts } from "../lib/wishlist.server";
 import { klaviyoEnabled, sendKlaviyoEvent } from "../lib/klaviyo.server";
+import { seedBaselines } from "../lib/price-drop.server";
 import {
   buildKlaviyoEvent,
   planWishlistEvents,
@@ -85,6 +86,13 @@ export const action = async ({ request }) => {
     },
     update: { productIds: JSON.stringify(parsed.ids), lastEventAt: triggeredAt },
   });
+
+  // Price-drop alerts need a starting price for each saved product; best effort.
+  if (admin && plan.added.length) {
+    await seedBaselines(admin, shop, plan.added).catch((err) =>
+      console.warn(`Price baselines: seeding failed: ${err?.message ?? err}`),
+    );
+  }
 
   return new Response();
 };
