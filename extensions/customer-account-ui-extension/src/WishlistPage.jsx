@@ -1,7 +1,13 @@
 import "@shopify/ui-extensions/preact";
 import { render } from "preact";
-import { useCallback, useEffect, useState } from "preact/hooks";
+import { useCallback, useEffect, useRef, useState } from "preact/hooks";
 import { addToCartUrl, loadProducts, readWishlist, removeFromWishlist } from "./wishlist-api";
+
+// The page only loads once when opened, so saves made on the storefront in another tab would
+// not appear. Extensions run sandboxed with no tab-visibility events, so re-check the saved list
+// on a timer instead (ids only; products reload only when the list changed) and stop after an hour.
+const REFRESH_MS = 20_000;
+const REFRESH_FOR_MS = 60 * 60_000;
 
 export default async () => {
   render(<WishlistPage />, document.body);
@@ -14,6 +20,10 @@ function WishlistPage() {
   const [removing, setRemoving] = useState(() => new Set());
   const [errorDetail, setErrorDetail] = useState("");
 
+  const loadedIds = useRef(null);
+  const removingRef = useRef(removing);
+  removingRef.current = removing;
+
   const load = useCallback(async () => {
     setStatus("loading");
     let step = "read";
@@ -21,6 +31,7 @@ function WishlistPage() {
       const { ids } = await readWishlist();
       step = "products";
       setProducts(await loadProducts(ids));
+      loadedIds.current = ids.join(",");
       setStatus("ready");
     } catch (err) {
       console.error("Wishlist load failed", step, err);
@@ -29,16 +40,39 @@ function WishlistPage() {
     }
   }, []);
 
+  // Silent background check: no spinner, errors ignored (the next tick tries again).
+  const refresh = useCallback(async () => {
+    if (loadedIds.current === null || removingRef.current.size) return;
+    try {
+      const { ids } = await readWishlist();
+      const key = ids.join(",");
+      if (key === loadedIds.current || removingRef.current.size) return;
+      const next = await loadProducts(ids);
+      if (removingRef.current.size) return;
+      loadedIds.current = key;
+      setProducts(next);
+    } catch (err) {
+      console.warn("Wishlist refresh failed", err);
+    }
+  }, []);
+
   useEffect(() => {
     load();
-  }, [load]);
+    const started = Date.now();
+    const timer = setInterval(() => {
+      if (Date.now() - started > REFRESH_FOR_MS) clearInterval(timer);
+      else refresh();
+    }, REFRESH_MS);
+    return () => clearInterval(timer);
+  }, [load, refresh]);
 
   async function remove(product) {
     const previous = products;
     setRemoving((s) => new Set(s).add(product.id));
     setProducts((list) => list.filter((p) => p.id !== product.id));
     try {
-      await removeFromWishlist(product.id);
+      const ids = await removeFromWishlist(product.id);
+      loadedIds.current = ids.join(",");
       shopify.toast.show(t("item.removed"));
     } catch (err) {
       console.error("Wishlist remove failed", err);
