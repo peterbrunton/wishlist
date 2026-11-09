@@ -1,8 +1,8 @@
 {
   "wishlist": {
     "button": {
-      "add": "Add to wishlist",
-      "remove": "Remove from wishlist"
+      "add": "Add to Wishlist",
+      "remove": "Remove from Wishlist"
     },
     "toast": {
       "guest": "Saved on this device. Log in to keep your wishlist on every device.",
