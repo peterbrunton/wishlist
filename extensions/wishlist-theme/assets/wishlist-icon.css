@@ -89,9 +89,11 @@
   display: flex;
   gap: 0.5em;
   align-items: center;
-  max-width: calc(100vw - 32px);
+  width: max-content;
+  max-width: min(480px, calc(100vw - 32px));
+  box-sizing: border-box;
   padding: 12px 18px;
-  border-radius: 999px;
+  border-radius: 16px;
   background: rgba(0, 0, 0, 0.88);
   color: #fff;
   font-size: 14px;
