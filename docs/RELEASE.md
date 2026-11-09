@@ -8,7 +8,8 @@ Every step marked 🔴 changes production. Peter runs or approves each one. Noth
 
 **Current state (2026-11-05):**
 - Active app version is from 2026-03-31. Its extensions call `/apps/wishlist` and `/public/wishlist`, and it stores wishlists in `custom.wishlist_products`.
-- **The production Fly app `wishlist-2026-app` is SUSPENDED** (seen 2026-11-06), so the released March version's proxy and account page can't reach a backend. Resume it as part of B.1 (`docs/HOSTING.md`).
+- The production Fly app `wishlist-2026-app` was **stopped, not suspended**: it auto-starts on request (25 s cold start from syd, 2026-11-09).
+- **B.1 progress (2026-11-09):** snapshot `vs_Klabb8BwAZMQsDP7JjzBM2` taken; volume forked to London `vol_vxmpo11mdedolxz4`; machine cloned to London `e829429c540028` (healthy, same March image, ~0.12 s). Sydney machine `2860062f9d1e18` stopped. **Peter must destroy it before B.3** (otherwise `fly deploy` updates two machines with separate SQLite files). The Sydney volume `vol_rkg56ogx20x1ww64` stays until HOSTING step 5.
 - On EU live there is 1 legacy wishlist (Peter's test customer).
 - The production theme `[PRODUCTION]` has **no** wishlist block placed, so the release changes nothing on the storefront until the block is added.
 
