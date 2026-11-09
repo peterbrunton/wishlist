@@ -2,7 +2,10 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
   METRIC_PRICE_DROP,
-  buildPriceDropEvent,
+  batchWindowMs,
+  buildPriceDropBatchEvent,
+  dueBatches,
+  pendingDropId,
   customersWithProduct,
   minDropPercent,
   planPriceChange,
@@ -99,22 +102,69 @@ test("customersWithProduct matches exact ids and skips bad rows", () => {
   assert.deepEqual(customersWithProduct(rows, gid(1)), ["c1"]);
 });
 
-test("buildPriceDropEvent carries old/new price and a per-customer unique id", () => {
-  const body = buildPriceDropEvent({
-    drop: { fromCents: 2699, toCents: 1754, savingCents: 945, percent: 35, key: "k" },
-    product: { id: gid(9), title: "Strips", handle: "strips", onlineStoreUrl: "https://u", imageUrl: "https://i" },
-    currencyCode: "EUR",
-    email: "a@b.c",
-    customerId: "gid://shopify/Customer/7",
-    shop: "s.myshopify.com",
-    time: t(2),
-  });
-  const a = body.data.attributes;
+const row = (o) => ({
+  id: pendingDropId("s", o.c ?? "gid://shopify/Customer/7", o.p, o.k ?? "k"),
+  shop: "s",
+  customerId: o.c ?? "gid://shopify/Customer/7",
+  email: "a@b.c",
+  productId: o.p,
+  fromCents: o.from,
+  toCents: o.to,
+  currencyCode: "EUR",
+  product: JSON.stringify({ id: o.p, title: o.t ?? "P", onlineStoreUrl: "https://u", imageUrl: "https://i" }),
+  createdAt: o.at,
+});
+
+test("batchWindowMs defaults to 10 minutes", () => {
+  assert.equal(batchWindowMs({}), 600_000);
+  assert.equal(batchWindowMs({ PRICE_DROP_BATCH_MINUTES: "1" }), 60_000);
+  assert.equal(batchWindowMs({ PRICE_DROP_BATCH_MINUTES: "0" }), 0);
+});
+
+test("dueBatches waits for the window, then groups a customer's drops into one batch", () => {
+  const rows = [
+    row({ p: gid(1), from: 2699, to: 1999, at: t(0), t: "Strips" }),
+    row({ p: gid(2), from: 4999, to: 2999, at: t(30), t: "Brush" }),
+  ];
+  assert.equal(dueBatches(rows, t(40), 60_000).length, 0);
+  const due = dueBatches(rows, new Date(t(0).getTime() + 60_000), 60_000);
+  assert.equal(due.length, 1);
+  assert.equal(due[0].items.length, 2);
+  assert.equal(due[0].items[0].product.title, "Brush"); // biggest saving first
+  assert.equal(due[0].rowIds.length, 2);
+});
+
+test("dueBatches keeps customers separate and collapses repeat drops of one product", () => {
+  const rows = [
+    row({ p: gid(1), from: 2699, to: 2299, at: t(0), k: "a" }),
+    row({ p: gid(1), from: 2299, to: 1999, at: t(5), k: "b" }),
+    row({ p: gid(1), from: 2699, to: 1999, at: t(0), c: "gid://shopify/Customer/8" }),
+  ];
+  const due = dueBatches(rows, t(59), 0);
+  assert.equal(due.length, 2);
+  const c7 = due.find((b) => b.customerId.endsWith("/7"));
+  assert.equal(c7.items.length, 1);
+  assert.equal(c7.items[0].fromCents, 2699);
+  assert.equal(c7.items[0].toCents, 1999);
+});
+
+test("buildPriceDropBatchEvent lists every item and leads with the biggest saving", () => {
+  const [batch] = dueBatches(
+    [
+      row({ p: gid(1), from: 2699, to: 1999, at: t(0), t: "Strips" }),
+      row({ p: gid(2), from: 4999, to: 2999, at: t(1), t: "Brush" }),
+    ],
+    t(59),
+    0,
+  );
+  const a = buildPriceDropBatchEvent({ batch, time: t(59) }).data.attributes;
   assert.equal(a.metric.data.attributes.name, METRIC_PRICE_DROP);
-  assert.equal(a.properties.Price, 17.54);
-  assert.equal(a.properties.OldPrice, 26.99);
-  assert.equal(a.properties.Saving, 9.45);
-  assert.equal(a.value_currency, "EUR");
-  assert.equal(a.unique_id, "pricedrop:9:k:7");
+  assert.equal(a.properties.ItemCount, 2);
+  assert.equal(a.properties.ProductName, "Brush");
+  assert.equal(a.properties.Price, 29.99);
+  assert.equal(a.properties.OldPrice, 49.99);
+  assert.equal(a.properties.Items[1].ProductName, "Strips");
+  assert.equal(a.properties.TotalSaving, 27);
+  assert.equal(a.unique_id, `pricedrop:${batch.firstRowId}`);
   assert.equal(a.profile.data.attributes.email, "a@b.c");
 });

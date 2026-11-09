@@ -4,6 +4,10 @@ import { ServerRouter } from "react-router";
 import { createReadableStreamFromReadable } from "@react-router/node";
 import { isbot } from "isbot";
 import { addDocumentResponseHeaders } from "./shopify.server";
+import { startPriceDropFlusher } from "./lib/price-drop.server";
+
+// Sends queued wishlist price-drop batches once a minute (single always-on machine).
+startPriceDropFlusher();
 
 export const streamTimeout = 5000;
 

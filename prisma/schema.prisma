@@ -59,3 +59,23 @@ model ProductPrice {
 
   @@index([shop])
 }
+
+// Price drops waiting to be sent, so a customer with several saved items on sale gets ONE
+// "Wishlist Price Drop" event listing them all (flushed after PRICE_DROP_BATCH_MINUTES).
+model PendingPriceDrop {
+  id           String    @id // "<shop>:<customer gid>:<product gid>:<drop key>"
+  shop         String
+  customerId   String
+  email        String
+  productId    String
+  fromCents    Int
+  toCents      Int
+  currencyCode String
+  product      String    // JSON: { id, title, handle, onlineStoreUrl, imageUrl }
+  createdAt    DateTime  @default(now())
+  sentAt       DateTime?
+  error        String?
+
+  @@index([sentAt])
+  @@index([shop, customerId])
+}

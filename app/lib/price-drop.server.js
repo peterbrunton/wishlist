@@ -2,7 +2,8 @@
 import db from "../db.server";
 import { METAFIELD_KEY, METAFIELD_NAMESPACE } from "./wishlist.server";
 import { parseStoredIds } from "./wishlist-core";
-import { toCents } from "./price-drop-core";
+import { batchWindowMs, buildPriceDropBatchEvent, dueBatches, pendingDropId, toCents } from "./price-drop-core";
+import { klaviyoEnabled, sendKlaviyoEvent } from "./klaviyo.server";
 
 async function graphql(admin, query, variables) {
   const response = await admin.graphql(query, { variables });
@@ -191,4 +192,100 @@ export async function syncWishlists(admin, shop) {
 
 export async function trackedPriceCount(shop) {
   return db.productPrice.count({ where: { shop } });
+}
+
+// ---- Batching: queue drops per customer, send one event per customer after the window ----
+
+/** Queues one drop per recipient (idempotent: same drop for the same customer upserts one row). */
+export async function queuePriceDrops({ shop, productId, drop, currencyCode, product, recipients }) {
+  const productJson = JSON.stringify(product);
+  for (const { customerId, email } of recipients) {
+    const id = pendingDropId(shop, customerId, productId, drop.key);
+    await db.pendingPriceDrop.upsert({
+      where: { id },
+      create: {
+        id,
+        shop,
+        customerId,
+        email,
+        productId,
+        fromCents: drop.fromCents,
+        toCents: drop.toCents,
+        currencyCode,
+        product: productJson,
+      },
+      update: {},
+    });
+  }
+}
+
+let flushing = false;
+
+/**
+ * Sends every batch whose window has passed. A product the customer removed in the meantime is
+ * dropped from the batch. Retryable Klaviyo failures stay queued for the next tick.
+ */
+export async function flushPriceDrops(now = new Date()) {
+  if (flushing) return { sent: 0 };
+  flushing = true;
+  let sent = 0;
+  try {
+    const rows = await db.pendingPriceDrop.findMany({ where: { sentAt: null } });
+    if (!rows.length) return { sent: 0 };
+    for (const batch of dueBatches(rows, now, batchWindowMs())) {
+      const snapshot = await db.wishlistSnapshot.findUnique({
+        where: { id: `${batch.shop}:${batch.customerId}` },
+        select: { productIds: true },
+      });
+      let saved = [];
+      try {
+        saved = JSON.parse(snapshot?.productIds ?? "[]");
+      } catch {
+        saved = [];
+      }
+      batch.items = batch.items.filter((it) => saved.includes(it.productId));
+
+      const mark = (data) =>
+        db.pendingPriceDrop.updateMany({ where: { id: { in: batch.rowIds } }, data });
+
+      if (!batch.items.length) {
+        await mark({ sentAt: now, error: "no longer saved" });
+        continue;
+      }
+      if (!klaviyoEnabled()) {
+        console.log(`Price drop batch: ${batch.customerId} ${batch.items.length} item(s), KLAVIYO_PRIVATE_KEY not set, skipping`);
+        await mark({ sentAt: now, error: "klaviyo disabled" });
+        continue;
+      }
+      const result = await sendKlaviyoEvent(buildPriceDropBatchEvent({ batch, time: now }));
+      if (result.ok) {
+        console.log(`Price drop batch: sent ${batch.items.length} item(s) to ${batch.customerId}`);
+        await mark({ sentAt: now });
+        sent++;
+      } else if (result.retryable) {
+        console.error(`Price drop batch: Klaviyo ${result.status}, will retry: ${result.detail}`);
+      } else {
+        console.error(`Price drop batch: Klaviyo ${result.status}, giving up: ${result.detail}`);
+        await mark({ sentAt: now, error: `klaviyo ${result.status}` });
+      }
+    }
+    // Housekeeping: forget sent rows after 30 days.
+    await db.pendingPriceDrop.deleteMany({
+      where: { sentAt: { lt: new Date(now.getTime() - 30 * 24 * 3600_000) } },
+    });
+  } catch (err) {
+    console.error("Price drop flush failed", err);
+  } finally {
+    flushing = false;
+  }
+  return { sent };
+}
+
+/** Starts the once-a-minute flusher (one per process). */
+export function startPriceDropFlusher(intervalMs = 60_000) {
+  if (globalThis.__priceDropFlusher) return;
+  globalThis.__priceDropFlusher = setInterval(() => {
+    flushPriceDrops().catch(() => {});
+  }, intervalMs);
+  globalThis.__priceDropFlusher.unref?.();
 }
