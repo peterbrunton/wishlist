@@ -34,8 +34,9 @@
 
 {%- if product_ref -%}
   <div
-    class="wishlist-app-block"
+    class="wishlist-app-block wishlist-app-block--align-{{ block.settings.alignment | default: 'left' }}"
     data-wishlist-block
+    data-wishlist-position="{{ block.settings.position | default: 'inline' }}"
     data-product-id="gid://shopify/Product/{{ product_ref.id }}"
     data-saved="{{ saved }}"
     data-wishlist-count="{{ wishlist_count }}"
@@ -81,6 +82,28 @@
   "javascript": "wishlist-icon.js",
   "stylesheet": "wishlist-icon.css",
   "settings": [
+    {
+      "type": "select",
+      "id": "position",
+      "label": "t:blocks.wishlist_button.settings.position",
+      "info": "t:blocks.wishlist_button.settings.position_info",
+      "options": [
+        { "value": "inline", "label": "t:blocks.wishlist_button.settings.position_inline" },
+        { "value": "image", "label": "t:blocks.wishlist_button.settings.position_image" }
+      ],
+      "default": "inline"
+    },
+    {
+      "type": "select",
+      "id": "alignment",
+      "label": "t:blocks.wishlist_button.settings.alignment",
+      "options": [
+        { "value": "left", "label": "t:blocks.wishlist_button.settings.alignment_left" },
+        { "value": "center", "label": "t:blocks.wishlist_button.settings.alignment_center" },
+        { "value": "right", "label": "t:blocks.wishlist_button.settings.alignment_right" }
+      ],
+      "default": "left"
+    },
     {
       "type": "range",
       "id": "icon_size",

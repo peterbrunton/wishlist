@@ -3,6 +3,14 @@
     "wishlist_button": {
       "name": "Wishlist button",
       "settings": {
+        "position": "Position",
+        "position_info": "On product image puts the heart in the bottom-right corner of the card image, just above any colour swatches. Only applies inside product cards; on the product page it stays inline.",
+        "position_inline": "Inline",
+        "position_image": "On product image",
+        "alignment": "Alignment (inline)",
+        "alignment_left": "Left",
+        "alignment_center": "Centre",
+        "alignment_right": "Right",
         "icon_size": "Icon size",
         "icon_color": "Icon colour",
         "icon_color_info": "Leave empty to match the surrounding text colour.",

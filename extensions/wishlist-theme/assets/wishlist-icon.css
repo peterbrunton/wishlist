@@ -2,6 +2,46 @@
   display: inline-flex;
 }
 
+/* Inline alignment: a full-width row so the heart can sit left, centre or right. */
+.wishlist-app-block--align-center,
+.wishlist-app-block--align-right {
+  display: flex;
+  width: 100%;
+}
+
+.wishlist-app-block--align-center {
+  justify-content: center;
+}
+
+.wishlist-app-block--align-right {
+  justify-content: flex-end;
+}
+
+/* "On product image": the script moves the block into the card image. --wishlist-lift is the
+   height of anything overlapping the image bottom (e.g. colour swatches), measured in JS. */
+.wishlist-app-block.is-on-image {
+  position: absolute;
+  right: 8px;
+  bottom: calc(var(--wishlist-lift, 0px) + 8px);
+  z-index: 3;
+  display: inline-flex;
+  width: auto;
+}
+
+.wishlist-app-block.is-on-image .wishlist-app-button {
+  justify-content: center;
+  width: calc(var(--wishlist-icon-size, 20px) + 16px);
+  height: calc(var(--wishlist-icon-size, 20px) + 16px);
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12);
+  color: var(--wishlist-icon-color, #111);
+}
+
+.wishlist-app-block.is-on-image .wishlist-app-label {
+  display: none;
+}
+
 .wishlist-app-button {
   display: inline-flex;
   align-items: center;

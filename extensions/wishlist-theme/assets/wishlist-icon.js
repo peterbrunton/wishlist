@@ -244,6 +244,7 @@
     var fresh = document.querySelectorAll("[data-wishlist-block]:not([data-wishlist-bound])");
     if (!fresh.length) return;
     fresh.forEach(bind);
+    fresh.forEach(placeOnImage);
     render();
   }
 
@@ -252,6 +253,54 @@
     scheduled = true;
     window.requestAnimationFrame(scan);
   }
+
+  // "On product image": move the block into the card's image container (bottom right) and lift it
+  // above anything the theme overlays on the image bottom, such as colour swatches.
+  var GALLERY_SELECTOR = ".card-gallery, .product-card__gallery, [class*='card-gallery']";
+
+  function placeOnImage(block) {
+    if (block.dataset.wishlistPosition !== "image") return;
+    var card = block.closest("product-card, .product-card");
+    if (!card) return; // product page etc.: stay inline
+    var gallery = block.closest(GALLERY_SELECTOR) || card.querySelector(GALLERY_SELECTOR);
+    if (!gallery) return;
+    if (block.parentElement !== gallery) {
+      if (getComputedStyle(gallery).position === "static") gallery.style.position = "relative";
+      gallery.appendChild(block);
+    }
+    block.classList.add("is-on-image");
+    measureLift(block, card, gallery);
+  }
+
+  function measureLift(block, card, gallery) {
+    var bottom = gallery.getBoundingClientRect().bottom;
+    var lift = 0;
+    var content = gallery.parentElement;
+    Array.prototype.forEach.call(content ? content.children : [], function (el) {
+      if (el === gallery || el.offsetParent === null) return;
+      var rect = el.getBoundingClientRect();
+      // A sibling drawn over the image bottom (negative margin overlay): lift above its top edge.
+      if (rect.height > 0 && rect.top < bottom - 1 && rect.bottom > bottom - gallery.offsetHeight / 2) {
+        lift = Math.max(lift, Math.ceil(bottom - rect.top));
+      }
+    });
+    block.style.setProperty("--wishlist-lift", lift + "px");
+  }
+
+  function relayout() {
+    document.querySelectorAll("[data-wishlist-block].is-on-image").forEach(function (block) {
+      var card = block.closest("product-card, .product-card");
+      var gallery = block.parentElement;
+      if (card && gallery) measureLift(block, card, gallery);
+    });
+  }
+
+  var resizeTimer = null;
+  window.addEventListener("resize", function () {
+    window.clearTimeout(resizeTimer);
+    resizeTimer = window.setTimeout(relayout, 150);
+  });
+  window.addEventListener("load", relayout);
 
   window.__wishlistApp = {
     getIds: function () {
