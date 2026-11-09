@@ -9,7 +9,9 @@ Every step marked 🔴 changes production. Peter runs or approves each one. Noth
 **Current state (2026-11-05):**
 - Active app version is from 2026-03-31. Its extensions call `/apps/wishlist` and `/public/wishlist`, and it stores wishlists in `custom.wishlist_products`.
 - The production Fly app `wishlist-2026-app` was **stopped, not suspended**: it auto-starts on request (25 s cold start from syd, 2026-11-09).
-- **B.1 progress (2026-11-09):** snapshot `vs_Klabb8BwAZMQsDP7JjzBM2` taken; volume forked to London `vol_vxmpo11mdedolxz4`; machine cloned to London `e829429c540028` (healthy, same March image, ~0.12 s). Sydney machine `2860062f9d1e18` stopped. **Peter must destroy it before B.3** (otherwise `fly deploy` updates two machines with separate SQLite files). The Sydney volume `vol_rkg56ogx20x1ww64` stays until HOSTING step 5.
+- **B.1 progress (2026-11-09):** snapshot `vs_Klabb8BwAZMQsDP7JjzBM2` taken; volume forked to London `vol_vxmpo11mdedolxz4`; machine cloned to London `e829429c540028` (healthy, same March image, ~0.12 s). Sydney machine `2860062f9d1e18` destroyed by Peter. The Sydney volume `vol_rkg56ogx20x1ww64` stays until HOSTING step 5 (earliest 2026-11-10).
+- **B.2 done (2026-11-09):** `KLAVIYO_PRIVATE_KEY` + new `SCOPES` staged by Peter.
+- **B.3 done (2026-11-09 11:38 UTC):** Fly release v6, image `deployment-01M701JSQ3JQWW343C2J3Y7Y7G`. `/healthz` ok (0.13 s warm), 1 machine in lhr with its check passing, migration `add_wishlist_snapshot` applied, secrets deployed, no 5xx. Rollback image (v5): `registry.fly.io/wishlist-2026-app:deployment-01KN1QFMF2QQJTE8Q93T6BMEPJ`.
 - On EU live there is 1 legacy wishlist (Peter's test customer).
 - The production theme `[PRODUCTION]` has **no** wishlist block placed, so the release changes nothing on the storefront until the block is added.
 
