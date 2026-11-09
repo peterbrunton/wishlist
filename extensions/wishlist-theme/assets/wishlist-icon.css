@@ -33,8 +33,8 @@
   width: calc(var(--wishlist-icon-size, 20px) + 16px);
   height: calc(var(--wishlist-icon-size, 20px) + 16px);
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.92);
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12);
+  background: rgb(255 255 255 / var(--wishlist-bg-alpha, 0.9));
+  box-shadow: 0 1px 4px rgb(0 0 0 / calc(var(--wishlist-bg-alpha, 0.9) * 0.13));
   color: var(--wishlist-icon-color, #111);
 }
 

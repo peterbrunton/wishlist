@@ -47,7 +47,7 @@
     data-toast-login="{{ 'wishlist.toast.login' | t | escape }}"
     data-toast-error="{{ 'wishlist.toast.error' | t | escape }}"
     data-login-url="{{ routes.account_login_url }}"
-    style="--wishlist-icon-size: {{ block.settings.icon_size }}px;{% if block.settings.icon_color != blank %} --wishlist-icon-color: {{ block.settings.icon_color }};{% endif %}"
+    style="--wishlist-icon-size: {{ block.settings.icon_size }}px; --wishlist-bg-alpha: {{ block.settings.image_bg_opacity | default: 90 | divided_by: 100.0 }};{% if block.settings.icon_color != blank %} --wishlist-icon-color: {{ block.settings.icon_color }};{% endif %}"
     {{ block.shopify_attributes }}
   >
     <button
@@ -92,6 +92,18 @@
         { "value": "image", "label": "t:blocks.wishlist_button.settings.position_image" }
       ],
       "default": "inline"
+    },
+    {
+      "type": "range",
+      "id": "image_bg_opacity",
+      "label": "t:blocks.wishlist_button.settings.image_bg_opacity",
+      "info": "t:blocks.wishlist_button.settings.image_bg_opacity_info",
+      "min": 0,
+      "max": 100,
+      "step": 5,
+      "unit": "%",
+      "default": 90,
+      "visible_if": "{{ block.settings.position == 'image' }}"
     },
     {
       "type": "select",
