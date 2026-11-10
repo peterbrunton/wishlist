@@ -1,0 +1,27 @@
+{
+  "blocks": {
+    "wishlist_button": {
+      "name": "Wishlist button",
+      "settings": {
+        "position": "Position",
+        "position_info": "On product image puts the heart in the bottom-right corner of the card image, lined up just above colour swatches across the section (cards without swatches use the same height). Only applies inside product cards; on the product page it stays inline.",
+        "position_inline": "Inline",
+        "position_image": "On product image",
+        "image_bg_opacity": "Circle background opacity",
+        "image_bg_opacity_info": "White circle behind the heart on product images. 0% = no circle.",
+        "alignment": "Alignment (inline)",
+        "alignment_left": "Left",
+        "alignment_center": "Centre",
+        "alignment_right": "Right",
+        "icon_size": "Icon size",
+        "icon_color": "Icon colour",
+        "icon_color_info": "Leave empty to match the surrounding text colour.",
+        "show_label": "Show text next to the icon",
+        "overrides_header": "Custom text",
+        "overrides_info": "Leave empty to use the built-in translations (English, German, French, Spanish).",
+        "label_add_override": "Add to wishlist text",
+        "label_remove_override": "Remove from wishlist text"
+      }
+    }
+  }
+}

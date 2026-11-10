@@ -10,7 +10,7 @@ generator client {
 // See https://www.prisma.io/docs/orm/reference/prisma-schema-reference#string for more information
 datasource db {
   provider = "sqlite"
-  url      = "file:dev.sqlite"
+  url      = env("DATABASE_URL")
 }
 
 model Session {
@@ -29,4 +29,53 @@ model Session {
   locale        String?
   collaborator  Boolean?  @default(false)
   emailVerified Boolean?  @default(false)
+  refreshToken        String?
+  refreshTokenExpires DateTime?
+}
+
+// Last wishlist state seen per customer, so Events API deliveries (which carry only the
+// new list) can be diffed into Added/Removed events. Not a source of truth — the metafield is.
+model WishlistSnapshot {
+  id          String   @id // "<shop>:<customer gid>"
+  shop        String
+  customerId  String
+  productIds  String   // JSON array of product GIDs
+  lastEventAt DateTime // shopify-triggered-at of the last applied delivery
+  updatedAt   DateTime @updatedAt
+
+  @@index([shop])
+}
+
+// Last lowest list price seen per product, so Product price deliveries (which carry only the new
+// price) can be turned into "Wishlist Price Drop" alerts. Seeded by the admin Sync button.
+model ProductPrice {
+  id           String   @id // "<shop>:<product gid>"
+  shop         String
+  productId    String
+  cents        Int      // priceRangeV2.minVariantPrice in minor units
+  currencyCode String
+  lastEventAt  DateTime // shopify-triggered-at of the last applied delivery (or sync time)
+  updatedAt    DateTime @updatedAt
+
+  @@index([shop])
+}
+
+// Price drops waiting to be sent, so a customer with several saved items on sale gets ONE
+// "Wishlist Price Drop" event listing them all (flushed after PRICE_DROP_BATCH_MINUTES).
+model PendingPriceDrop {
+  id           String    @id // "<shop>:<customer gid>:<product gid>:<drop key>"
+  shop         String
+  customerId   String
+  email        String
+  productId    String
+  fromCents    Int
+  toCents      Int
+  currencyCode String
+  product      String    // JSON: { id, title, handle, onlineStoreUrl, imageUrl }
+  createdAt    DateTime  @default(now())
+  sentAt       DateTime?
+  error        String?
+
+  @@index([sentAt])
+  @@index([shop, customerId])
 }

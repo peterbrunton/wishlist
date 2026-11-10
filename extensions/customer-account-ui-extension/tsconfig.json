@@ -1,0 +1,14 @@
+{
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "jsxImportSource": "preact",
+    "target": "ES2020",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "allowJs": true,
+    "checkJs": false,
+    "skipLibCheck": true,
+    "types": ["@shopify/ui-extensions"]
+  },
+  "include": ["./src", "./node_modules/@shopify/ui-extensions/build/ts/**/*"]
+}

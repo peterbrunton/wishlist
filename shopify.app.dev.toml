@@ -1,0 +1,118 @@
+# DEV app config — "wishlist-2026" on spotlightoralcaredev.myshopify.com
+# Use: `pnpm dev` (runs `shopify app dev --config dev`).
+# Released versions run on the staging backend https://wishlist-2026-dev.fly.dev (docs/STAGING.md).
+# `pnpm dev` still rewrites the URLs to a tunnel while it runs; afterwards run `pnpm deploy:dev`
+# to point the dev app back at staging.
+# Keep scopes, webhooks and proxy in sync with shopify.app.toml (production).
+
+client_id = "0e190ece95535190607a1cac997ed81c"
+name = "wishlist-2026"
+application_url = "https://wishlist-2026-dev.fly.dev"
+embedded = true
+
+[build]
+automatically_update_urls_on_dev = true
+
+[webhooks]
+api_version = "2026-10"
+
+  [[webhooks.subscriptions]]
+  topics = [ "app/uninstalled" ]
+  uri = "/webhooks/app/uninstalled"
+
+  [[webhooks.subscriptions]]
+  topics = [ "app/scopes_update" ]
+  uri = "/webhooks/app/scopes_update"
+
+  # GDPR compliance topics (EU store)
+  [[webhooks.subscriptions]]
+  compliance_topics = [ "customers/data_request", "customers/redact", "shop/redact" ]
+  uri = "/webhooks/compliance"
+
+[app_proxy]
+url = "https://wishlist-2026-dev.fly.dev/apps/wishlist"
+subpath = "wishlist"
+prefix = "apps"
+
+# Events API: Shopify notifies us whenever $app:wishlist changes, from ANY write path
+# (storefront proxy, customer account page). Handled by app/routes/events.wishlist.jsx,
+# which diffs against the last snapshot and sends Klaviyo Added/Removed events.
+[events]
+api_version = "2026-10"
+
+  [[events.subscription]]
+  handle = "wishlist-changed"
+  topic = "Customer"
+  actions = [ "update" ]
+  triggers = [ "customer.metafield(namespace: '$app', key: 'wishlist').*" ]
+  uri = "/events/wishlist"
+  query = """
+  query wishlist_event_payload($customerId: ID!, $metafieldNamespace: String!, $metafieldKey: String!) {
+    customer(id: $customerId) {
+      id
+      defaultEmailAddress {
+        emailAddress
+      }
+      metafield(namespace: $metafieldNamespace, key: $metafieldKey) {
+        value
+        updatedAt
+      }
+    }
+  }
+  """
+
+# Price-drop alerts: fires when a variant price changes on an active product. Handled by
+# app/routes/events.price.jsx, which compares the lowest price with the stored baseline and sends
+# Klaviyo "Wishlist Price Drop" events to customers who have the product saved.
+  [[events.subscription]]
+  handle = "price-changed"
+  topic = "Product"
+  actions = [ "update" ]
+  triggers = [ "product.variants.price" ]
+  uri = "/events/price"
+  query_filter = "product.status:'ACTIVE'"
+  query = """
+  query price_drop_payload($productId: ID!, $variantsId: ID!) {
+    productVariant(id: $variantsId) {
+      id
+      price
+    }
+    product(id: $productId) {
+      id
+      status
+      title
+      handle
+      onlineStoreUrl
+      featuredMedia {
+        preview {
+          image {
+            url
+          }
+        }
+      }
+      priceRangeV2 {
+        minVariantPrice {
+          amount
+          currencyCode
+        }
+      }
+    }
+  }
+  """
+
+# App-owned wishlist storage: $app:wishlist on each customer.
+# Product references (not snapshots) so price/currency/image are always live per market.
+[customer.metafields.app.wishlist]
+name = "Wishlist"
+description = "Products this customer saved to their wishlist (managed by the Wishlist app)."
+type = "list.product_reference"
+access.admin = "merchant_read"
+access.storefront = "public_read"
+access.customer_account = "read_write"
+
+[access_scopes]
+# Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
+scopes = "customer_read_customers,customer_write_customers,read_customers,read_products,write_customers"
+
+[auth]
+redirect_urls = [ "https://wishlist-2026-dev.fly.dev/auth/callback" ]

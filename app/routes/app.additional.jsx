@@ -1,83 +1,72 @@
-import {
-  Box,
-  Card,
-  Layout,
-  Link,
-  List,
-  Page,
-  Text,
-  BlockStack,
-} from "@shopify/polaris";
-import { TitleBar } from "@shopify/app-bridge-react";
+import { useLoaderData } from "react-router";
+import { boundary } from "@shopify/shopify-app-react-router/server";
+import { authenticate } from "../shopify.server";
 
-export default function AdditionalPage() {
+export const loader = async ({ request }) => {
+  const { session } = await authenticate.admin(request);
+  return { shop: session.shop };
+};
+
+export default function SetupGuide() {
+  const { shop } = useLoaderData();
+  const admin = `https://${shop}/admin`;
+
   return (
-    <Page>
-      <TitleBar title="Additional page" />
-      <Layout>
-        <Layout.Section>
-          <Card>
-            <BlockStack gap="300">
-              <Text as="p" variant="bodyMd">
-                The app template comes with an additional page which
-                demonstrates how to create multiple pages within app navigation
-                using{" "}
-                <Link
-                  url="https://shopify.dev/docs/apps/tools/app-bridge"
-                  target="_blank"
-                  removeUnderline
-                >
-                  App Bridge
-                </Link>
-                .
-              </Text>
-              <Text as="p" variant="bodyMd">
-                To create your own page and have it show up in the app
-                navigation, add a page inside <Code>app/routes</Code>, and a
-                link to it in the <Code>&lt;NavMenu&gt;</Code> component found
-                in <Code>app/routes/app.jsx</Code>.
-              </Text>
-            </BlockStack>
-          </Card>
-        </Layout.Section>
-        <Layout.Section variant="oneThird">
-          <Card>
-            <BlockStack gap="200">
-              <Text as="h2" variant="headingMd">
-                Resources
-              </Text>
-              <List>
-                <List.Item>
-                  <Link
-                    url="https://shopify.dev/docs/apps/design-guidelines/navigation#app-nav"
-                    target="_blank"
-                    removeUnderline
-                  >
-                    App nav best practices
-                  </Link>
-                </List.Item>
-              </List>
-            </BlockStack>
-          </Card>
-        </Layout.Section>
-      </Layout>
-    </Page>
+    <s-page heading="Setup guide">
+      <s-section heading="1. Add the wishlist button to your theme">
+        <s-ordered-list>
+          <s-list-item>
+            Open the theme editor on an unpublished copy of your theme.
+          </s-list-item>
+          <s-list-item>
+            On the product template, add the{" "}
+            <s-text type="strong">Wishlist button</s-text> app block to the
+            product information section.
+          </s-list-item>
+          <s-list-item>
+            Optionally add it to product cards on collection, search and home
+            page sections.
+          </s-list-item>
+          <s-list-item>
+            Preview, then publish with your next theme release.
+          </s-list-item>
+        </s-ordered-list>
+        <s-link href={`${admin}/themes`} target="_blank">
+          Go to themes
+        </s-link>
+      </s-section>
+
+      <s-section heading="2. Add the Wishlist page to customer accounts">
+        <s-ordered-list>
+          <s-list-item>
+            Go to Settings → Customer accounts and open the account menu.
+          </s-list-item>
+          <s-list-item>
+            Add a menu item that links to the{" "}
+            <s-text type="strong">Wishlist</s-text> app page.
+          </s-list-item>
+          <s-list-item>
+            Optionally place the wishlist shortcut block on the Orders page in
+            the customer account editor.
+          </s-list-item>
+        </s-ordered-list>
+        <s-link href={`${admin}/settings/customer_accounts`} target="_blank">
+          Open customer account settings
+        </s-link>
+      </s-section>
+
+      <s-section heading="3. Reminder emails">
+        <s-paragraph>
+          Wishlist activity is sent to Klaviyo as{" "}
+          <s-text type="strong">Added to Wishlist</s-text> and{" "}
+          <s-text type="strong">Removed from Wishlist</s-text> events. Build
+          the reminder flow in Klaviyo using these metrics as the trigger.
+        </s-paragraph>
+      </s-section>
+    </s-page>
   );
 }
 
-function Code({ children }) {
-  return (
-    <Box
-      as="span"
-      padding="025"
-      paddingInlineStart="100"
-      paddingInlineEnd="100"
-      background="bg-surface-active"
-      borderWidth="025"
-      borderColor="border"
-      borderRadius="100"
-    >
-      <code>{children}</code>
-    </Box>
-  );
-}
+export const headers = (headersArgs) => {
+  return boundary.headers(headersArgs);
+};

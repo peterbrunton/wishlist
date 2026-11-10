@@ -1,114 +1,160 @@
-{% liquid
-  assign button_add_text = block.settings.button_label_add | default: "Add to wishlist"
-  assign button_remove_text = block.settings.button_label_remove | default: "Remove from wishlist"
-
-  assign product_ref = product
-
-  if product_ref == blank and card_product
-    assign product_ref = card_product
+{%- liquid
+  assign product_ref = closest.product
+  if product_ref == blank
+    assign product_ref = product
   endif
 
-  if product_ref == blank and closest
-    if closest.product
-      assign product_ref = closest.product
-    endif
+  assign label_add = 'wishlist.button.add' | t
+  assign label_remove = 'wishlist.button.remove' | t
+  if block.settings.label_add_override != blank
+    assign label_add = block.settings.label_add_override
+  endif
+  if block.settings.label_remove_override != blank
+    assign label_remove = block.settings.label_remove_override
   endif
 
-  if product_ref
-    assign variant_ref = product_ref.selected_or_first_available_variant
-    assign product_url = product_ref.online_store_url | default: product_ref.url
-    assign image_url = product_ref.featured_image | image_url: width: 640
-    assign customer_identifier = customer.id
+  assign saved = false
+  assign wishlist_count = 0
+  if customer and product_ref
+    assign wishlist_items = customer.metafields['$app'].wishlist.value
+    assign wishlist_count = wishlist_items.count | default: 0
+    for item in wishlist_items
+      if item.id == product_ref.id
+        assign saved = true
+        break
+      endif
+    endfor
   endif
-%}
 
-{% if product_ref %}
+  assign current_label = label_add
+  if saved
+    assign current_label = label_remove
+  endif
+-%}
+
+{%- if product_ref -%}
   <div
-    class="wishlist-app-block"
+    class="wishlist-app-block wishlist-app-block--align-{{ block.settings.alignment | default: 'left' }}"
     data-wishlist-block
+    data-wishlist-position="{{ block.settings.position | default: 'inline' }}"
     data-product-id="gid://shopify/Product/{{ product_ref.id }}"
-    data-product-handle="{{ product_ref.handle }}"
-    data-product-title="{{ product_ref.title | escape }}"
-    data-product-url="{{ product_url }}"
-    data-product-image="{{ image_url }}"
-    data-product-price="{{ variant_ref.price }}"
-    data-product-currency="{{ shop.currency }}"
-    data-button-add="{{ button_add_text | escape }}"
-    data-button-remove="{{ button_remove_text | escape }}"
-    data-login-message="{{ block.settings.login_prompt_text | escape }}"
-    data-customer-id="{{ customer_identifier }}"
+    data-saved="{{ saved }}"
+    data-wishlist-count="{{ wishlist_count }}"
+    data-logged-in="{% if customer %}true{% else %}false{% endif %}"
+    data-label-add="{{ label_add | escape }}"
+    data-label-remove="{{ label_remove | escape }}"
+    data-toast-guest="{{ 'wishlist.toast.guest' | t | escape }}"
+    data-toast-login="{{ 'wishlist.toast.login' | t | escape }}"
+    data-toast-error="{{ 'wishlist.toast.error' | t | escape }}"
+    data-login-url="{{ routes.account_login_url }}"
+    style="--wishlist-icon-size: {{ block.settings.icon_size }}px; --wishlist-bg-alpha: {{ block.settings.image_bg_opacity | default: 90 | divided_by: 100.0 }};{% if block.settings.icon_color != blank %} --wishlist-icon-color: {{ block.settings.icon_color }};{% endif %}"
+    {{ block.shopify_attributes }}
   >
     <button
       class="wishlist-app-button"
       type="button"
       data-wishlist-button
-      aria-pressed="false"
-      style="display:inline-flex;align-items:center;justify-content:center;border:none;background:none;padding:0;cursor:pointer;"
-      title="{{ button_add_text }}"
-      data-title-add="{{ button_add_text | escape }}"
-      data-title-remove="{{ button_remove_text | escape }}"
+      aria-pressed="{{ saved }}"
+      aria-label="{{ current_label | escape }}"
+      title="{{ current_label | escape }}"
     >
-      <span class="wishlist-app-icon" aria-hidden="true" style="display:inline-flex;align-items:center;">
-        <svg
-          data-wishlist-icon="outline"
-          width="20"
-          height="20"
-          viewBox="0 0 24 24"
-          fill="none"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <path
-            d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"
-            stroke="currentColor"
-            stroke-width="1.6"
-            fill="none"
-          />
-        </svg>
-        <svg
-          data-wishlist-icon="solid"
-          width="20"
-          height="20"
-          viewBox="0 0 24 24"
-          fill="currentColor"
-          xmlns="http://www.w3.org/2000/svg"
-          style="display:none"
-        >
-          <path
-            d="M12.001 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54l-1.449 1.31z"
-          />
-        </svg>
-      </span>
+      <svg class="wishlist-app-icon wishlist-app-icon--outline" aria-hidden="true" focusable="false" viewBox="0 0 24 24">
+        <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" fill="none" stroke="currentColor" stroke-width="1.6"/>
+      </svg>
+      <svg class="wishlist-app-icon wishlist-app-icon--solid" aria-hidden="true" focusable="false" viewBox="0 0 24 24">
+        <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" fill="currentColor"/>
+      </svg>
+      {%- if block.settings.show_label -%}
+        <span class="wishlist-app-label" data-wishlist-label>{{ current_label | escape }}</span>
+      {%- endif -%}
     </button>
   </div>
-{% else %}
-  <div class="wishlist-app-block wishlist-app-block--unavailable">
-    <span>{{ 'No product available for wishlist' }}</span>
+{%- elsif request.design_mode -%}
+  <div class="wishlist-app-block wishlist-app-block--unavailable" {{ block.shopify_attributes }}>
+    {{ 'wishlist.editor.no_product' | t }}
   </div>
-{% endif %}
+{%- endif -%}
 
 {% schema %}
 {
-  "name": "Wishlist button",
+  "name": "t:blocks.wishlist_button.name",
   "target": "section",
   "javascript": "wishlist-icon.js",
+  "stylesheet": "wishlist-icon.css",
   "settings": [
     {
-      "type": "text",
-      "id": "button_label_add",
-      "label": "Add button text",
-      "default": "Add to wishlist"
+      "type": "select",
+      "id": "position",
+      "label": "t:blocks.wishlist_button.settings.position",
+      "info": "t:blocks.wishlist_button.settings.position_info",
+      "options": [
+        { "value": "inline", "label": "t:blocks.wishlist_button.settings.position_inline" },
+        { "value": "image", "label": "t:blocks.wishlist_button.settings.position_image" }
+      ],
+      "default": "inline"
+    },
+    {
+      "type": "range",
+      "id": "image_bg_opacity",
+      "label": "t:blocks.wishlist_button.settings.image_bg_opacity",
+      "info": "t:blocks.wishlist_button.settings.image_bg_opacity_info",
+      "min": 0,
+      "max": 100,
+      "step": 5,
+      "unit": "%",
+      "default": 90,
+      "visible_if": "{{ block.settings.position == 'image' }}"
+    },
+    {
+      "type": "select",
+      "id": "alignment",
+      "label": "t:blocks.wishlist_button.settings.alignment",
+      "options": [
+        { "value": "left", "label": "t:blocks.wishlist_button.settings.alignment_left" },
+        { "value": "center", "label": "t:blocks.wishlist_button.settings.alignment_center" },
+        { "value": "right", "label": "t:blocks.wishlist_button.settings.alignment_right" }
+      ],
+      "default": "left"
+    },
+    {
+      "type": "range",
+      "id": "icon_size",
+      "label": "t:blocks.wishlist_button.settings.icon_size",
+      "min": 16,
+      "max": 40,
+      "step": 2,
+      "unit": "px",
+      "default": 20
+    },
+    {
+      "type": "color",
+      "id": "icon_color",
+      "label": "t:blocks.wishlist_button.settings.icon_color",
+      "info": "t:blocks.wishlist_button.settings.icon_color_info"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_label",
+      "label": "t:blocks.wishlist_button.settings.show_label",
+      "default": false
+    },
+    {
+      "type": "header",
+      "content": "t:blocks.wishlist_button.settings.overrides_header",
+      "info": "t:blocks.wishlist_button.settings.overrides_info",
+      "visible_if": "{{ block.settings.show_label }}"
     },
     {
       "type": "text",
-      "id": "button_label_remove",
-      "label": "Remove button text",
-      "default": "Remove from wishlist"
+      "id": "label_add_override",
+      "label": "t:blocks.wishlist_button.settings.label_add_override",
+      "visible_if": "{{ block.settings.show_label }}"
     },
     {
       "type": "text",
-      "id": "login_prompt_text",
-      "label": "Guest login prompt",
-      "default": "Log in to save your wishlist."
+      "id": "label_remove_override",
+      "label": "t:blocks.wishlist_button.settings.label_remove_override",
+      "visible_if": "{{ block.settings.show_label }}"
     }
   ],
   "enabled_on": {

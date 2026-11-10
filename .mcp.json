@@ -1,0 +1,34 @@
+{
+  "mcpServers": {
+    "shopify-dev-mcp": {
+      "command": "shopify-dev-mcp",
+      "args": [],
+      "env": {
+        "OPT_OUT_INSTRUMENTATION": "true"
+      }
+    },
+    "github": {
+      "command": "docker",
+      "args": [
+        "run", "-i", "--rm",
+        "-e", "GITHUB_PERSONAL_ACCESS_TOKEN",
+        "ghcr.io/github/github-mcp-server"
+      ],
+      "env": {
+        "GITHUB_PERSONAL_ACCESS_TOKEN": "YOUR_GITHUB_PAT_HERE"
+      }
+    },
+    "sentry": {
+      "type": "http",
+      "url": "https://mcp.sentry.dev/mcp"
+    },
+    "prisma": {
+      "command": "npx",
+      "args": ["-y", "prisma", "mcp"]
+    },
+    "eslint": {
+      "command": "npx",
+      "args": ["@eslint/mcp@latest"]
+    }
+  }
+}

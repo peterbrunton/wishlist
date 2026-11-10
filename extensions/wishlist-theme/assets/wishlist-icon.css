@@ -1,0 +1,125 @@
+.wishlist-app-block {
+  display: inline-flex;
+}
+
+/* Inline alignment: a full-width row so the heart can sit left, centre or right. */
+.wishlist-app-block--align-center,
+.wishlist-app-block--align-right {
+  display: flex;
+  width: 100%;
+}
+
+.wishlist-app-block--align-center {
+  justify-content: center;
+}
+
+.wishlist-app-block--align-right {
+  justify-content: flex-end;
+}
+
+/* "On product image": the script moves the block into the card image. --wishlist-lift is the
+   height of anything overlapping the image bottom (e.g. colour swatches), measured in JS. */
+.wishlist-app-block.is-on-image {
+  position: absolute;
+  right: 8px;
+  bottom: calc(var(--wishlist-lift, 0px) + 8px);
+  z-index: 3;
+  display: inline-flex;
+  width: auto;
+}
+
+.wishlist-app-block.is-on-image .wishlist-app-button {
+  justify-content: center;
+  width: calc(var(--wishlist-icon-size, 20px) + 16px);
+  height: calc(var(--wishlist-icon-size, 20px) + 16px);
+  border-radius: 50%;
+  background: rgb(255 255 255 / var(--wishlist-bg-alpha, 0.9));
+  box-shadow: 0 1px 4px rgb(0 0 0 / calc(var(--wishlist-bg-alpha, 0.9) * 0.13));
+  color: var(--wishlist-icon-color, #111);
+}
+
+.wishlist-app-block.is-on-image .wishlist-app-label {
+  display: none;
+}
+
+.wishlist-app-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4em;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--wishlist-icon-color, currentColor);
+  font: inherit;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.wishlist-app-button:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 3px;
+  border-radius: 2px;
+}
+
+.wishlist-app-button[aria-busy="true"] {
+  opacity: 0.6;
+  cursor: progress;
+}
+
+.wishlist-app-icon {
+  width: var(--wishlist-icon-size, 20px);
+  height: var(--wishlist-icon-size, 20px);
+  flex: none;
+}
+
+.wishlist-app-button .wishlist-app-icon--solid,
+.wishlist-app-button[aria-pressed="true"] .wishlist-app-icon--outline {
+  display: none;
+}
+
+.wishlist-app-button[aria-pressed="true"] .wishlist-app-icon--solid {
+  display: block;
+}
+
+.wishlist-app-toast {
+  position: fixed;
+  left: 50%;
+  bottom: 24px;
+  z-index: 2147483647;
+  display: flex;
+  gap: 0.5em;
+  align-items: center;
+  width: max-content;
+  max-width: min(480px, calc(100vw - 32px));
+  box-sizing: border-box;
+  padding: 12px 18px;
+  border-radius: 16px;
+  background: rgba(0, 0, 0, 0.88);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.4;
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.25);
+  transform: translateX(-50%);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 150ms ease;
+}
+
+.wishlist-app-toast[data-visible="true"] {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.wishlist-app-toast a {
+  color: inherit;
+  font-weight: 600;
+  text-decoration: underline;
+  white-space: nowrap;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wishlist-app-toast {
+    transition: none;
+  }
+}

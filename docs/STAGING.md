@@ -1,0 +1,59 @@
+# Staging: a released build on the dev store
+
+**Dev app:** `wishlist-2026` (`shopify.app.dev.toml`, client `0e19…`), installed on `spotlightoralcaredev`.
+**Backend:** Fly app `wishlist-2026-dev`, config `fly.dev.toml`, https://wishlist-2026-dev.fly.dev
+
+This gives the dev store a **released** version that keeps working without `pnpm dev` running, so the full release order can be rehearsed before production.
+
+None of this touches the live EU store or the production app (`shopify.app.toml` / `wishlist-2026-app`).
+
+## Status
+
+- 2026-11-06: staging created. Fly `wishlist-2026-dev` (machine `8577736a433098`, lhr), secret staged via `shopify app env show`, `/healthz` ok. Dev app version **2.0.0-staging.1** released (active), dev preview cleaned.
+- 2026-11-06 (later): **2.0.0-staging.2** released with Shopify CLI **5.0.1** (`npx @shopify/cli@5.0.1`). The global CLI is 3.92.1, which is too old.
+  - The `$app:wishlist` definition only appeared after **uninstall + reinstall** of the dev app. A release onto the existing install (made by `app dev` on 5 Nov) didn't create it.
+  - The proxy came up as `/apps/wishlist-1`, then `-3`, because the production app "Wishlist 2026" was also installed on the dev store and held `/apps/wishlist`. Peter uninstalled it from the dev store (the live EU store is unaffected) and its stale 25 Mar dev preview was cleaned. After reinstalling, the dev app got `/apps/wishlist`.
+  - Verified: dashboard "Metafield definition found" (list.product_reference); storefront `/apps/wishlist` → `{"ids":[],"wishlist":[]}` served by staging.
+- 2026-11-06: **2.0.0-staging.3** fixes the blank customer-account pages. The extension had no `jsxImportSource: "preact"`, so esbuild compiled the JSX for React and Preact's `render()` drew nothing. Fixed with `extensions/customer-account-ui-extension/tsconfig.json`; the bundles now have no React (28 KB / 23 KB).
+  - The full page also has to be **added from the editor's Apps sidebar** (Settings → Checkout → Customize → Apps → wishlist-page ⊕), not just linked in the menu. Done on the dev store, along with the menu item "Wishlist" and the wishlist-nav block on the Orders page.
+- 2026-11-06: **staging.4–7**: the account page showed "couldn't load". The real error was `Access denied … customer_read_customers`. The Customer Account API needs **`customer_read_customers,customer_write_customers`** in `[access_scopes]` (added to both TOMLs and `SCOPES`), and the store has to approve the update prompt. The page now shows the error detail under the message. Grid: 4 across above 560px container width, otherwise 2. `s-grid` takes **one** `@container` condition + fallback; chaining two silently gives 1 column.
+- Reinstall link: `https://admin.shopify.com/store/spotlightoralcaredev/oauth/install?client_id=0e190ece95535190607a1cac997ed81c`
+
+## One-time setup
+
+```bash
+fly auth login                                    # opens the browser
+fly apps create wishlist-2026-dev
+fly volumes create wishlist_dev_data --app wishlist-2026-dev --region lhr --size 1 --yes
+```
+
+Secret (no copy/paste needed):
+
+```bash
+S=$(shopify app env show --config dev 2>/dev/null | sed -n 's/.*SHOPIFY_API_SECRET=//p' | tr -d '[:space:]') && echo "length ${#S}" && fly secrets set SHOPIFY_API_SECRET="$S" -a wishlist-2026-dev --stage; unset S
+```
+
+Or copy the dev app's **client secret** from Dev Dashboard → wishlist-2026 → Settings. Set it yourself; don't paste it in chat:
+
+```bash
+read -rs "S?wishlist-2026 client secret: " && fly secrets set SHOPIFY_API_SECRET="$S" -a wishlist-2026-dev --stage; unset S
+```
+
+Optional: add `KLAVIYO_PRIVATE_KEY` the same way to test real Klaviyo events from the dev store. The EU flow `Tp9N35` is a draft, so nothing would send.
+
+## Each staging release
+
+```bash
+fly deploy --config fly.dev.toml                  # backend first
+curl https://wishlist-2026-dev.fly.dev/healthz    # → ok
+pnpm deploy:dev                                   # = shopify app deploy --config dev (creates + releases a version)
+shopify app dev clean --config dev                # if a dev preview is still active, it overrides the release
+```
+
+Then, in the dev store admin, open **Apps → wishlist-2026** once. This creates the offline session on the new backend; until then, proxy and event calls have no session. After that, run the QA matrix in `RELEASE.md` §A.
+
+## Notes
+
+- `pnpm dev` still works for local work, but it rewrites the dev app's URLs to a tunnel. Afterwards, run `pnpm deploy:dev` to point the dev app back at staging.
+- **Cost:** the machine sleeps when idle (`min_machines_running = 0`), plus a 1 GB volume, so it's a few dollars a month at most. To remove it: `fly apps destroy wishlist-2026-dev`.
+- Staging has its own SQLite (sessions + wishlist snapshots). Wishlists themselves live on the customers in Shopify, so nothing is lost if it's rebuilt.
