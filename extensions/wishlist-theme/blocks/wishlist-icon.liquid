@@ -141,17 +141,20 @@
     {
       "type": "header",
       "content": "t:blocks.wishlist_button.settings.overrides_header",
-      "info": "t:blocks.wishlist_button.settings.overrides_info"
+      "info": "t:blocks.wishlist_button.settings.overrides_info",
+      "visible_if": "{{ block.settings.show_label }}"
     },
     {
       "type": "text",
       "id": "label_add_override",
-      "label": "t:blocks.wishlist_button.settings.label_add_override"
+      "label": "t:blocks.wishlist_button.settings.label_add_override",
+      "visible_if": "{{ block.settings.show_label }}"
     },
     {
       "type": "text",
       "id": "label_remove_override",
-      "label": "t:blocks.wishlist_button.settings.label_remove_override"
+      "label": "t:blocks.wishlist_button.settings.label_remove_override",
+      "visible_if": "{{ block.settings.show_label }}"
     }
   ],
   "enabled_on": {
